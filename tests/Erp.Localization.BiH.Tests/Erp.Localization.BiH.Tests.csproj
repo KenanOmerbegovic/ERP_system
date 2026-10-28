@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Erp.Localization.BiH\Erp.Localization.BiH.csproj" />
+  </ItemGroup>
+
+</Project>

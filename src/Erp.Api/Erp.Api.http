@@ -1,0 +1,66 @@
+@Erp.Api_HostAddress = http://localhost:5094
+# Paste an id returned by "Create company" / "Create unit of measure".
+@companyId = 00000000-0000-0000-0000-000000000000
+@unitId = 00000000-0000-0000-0000-000000000000
+
+### OpenAPI document (Development only)
+GET {{Erp.Api_HostAddress}}/openapi/v1.json
+
+### List companies
+GET {{Erp.Api_HostAddress}}/api/companies
+
+### Create company
+POST {{Erp.Api_HostAddress}}/api/companies
+Content-Type: application/json
+
+{
+  "name": "Bosna Trade d.o.o.",
+  "taxId": "4200000000001",
+  "vatNumber": "200000000001",
+  "address": "Ferhadija 1",
+  "postalCode": "71000",
+  "city": "Sarajevo"
+}
+
+### Create unit of measure
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/units-of-measure
+Content-Type: application/json
+
+{ "code": "kom", "name": "Komad" }
+
+### List units of measure
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/units-of-measure
+
+### Create business partner (countryCode omitted = domestic)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/business-partners
+Content-Type: application/json
+
+{
+  "code": "K001",
+  "name": "Kupac d.o.o.",
+  "taxId": "4200000000099",
+  "address": "Titova 5",
+  "postalCode": "71000",
+  "city": "Sarajevo",
+  "isCustomer": true,
+  "isSupplier": false,
+  "isActive": true
+}
+
+### List business partners
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/business-partners?search=kup&page=1&pageSize=50
+
+### Create article
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/articles
+Content-Type: application/json
+
+{
+  "code": "A001",
+  "name": "Vijak M8",
+  "type": "Goods",
+  "unitOfMeasureId": "{{unitId}}",
+  "isActive": true
+}
+
+### List articles
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/articles?page=1&pageSize=50

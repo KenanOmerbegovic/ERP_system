@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Erp.Modules.Core\Erp.Modules.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: erp_dev_password
+      POSTGRES_DB: erp_dev
+    ports:
+      # Host port 5433: a native PostgreSQL may already own 5432.
+      - "5433:5432"
+    volumes:
+      - erp-db:/var/lib/postgresql/data
+volumes:
+  erp-db:

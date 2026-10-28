@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+  <!-- Every project under src/ must be referenced here so the rules can inspect it
+       (enforced by SolutionCoverageTests). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Erp.Api\Erp.Api.csproj" />
+    <ProjectReference Include="..\..\src\Erp.Localization.BiH\Erp.Localization.BiH.csproj" />
+    <ProjectReference Include="..\..\src\Erp.SharedKernel\Erp.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Core\Erp.Modules.Core.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Core.Contracts\Erp.Modules.Core.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
