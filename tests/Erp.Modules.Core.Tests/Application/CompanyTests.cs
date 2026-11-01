@@ -1,5 +1,8 @@
+using System.Text.Json;
+using Erp.Messaging.Outbox;
 using Erp.Modules.Core.Application;
 using Erp.Modules.Core.Application.Companies;
+using Erp.Modules.Core.Contracts.Companies;
 using Erp.Modules.Core.Tests.TestSupport;
 using Erp.SharedKernel.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -164,13 +167,59 @@ public sealed class CompanyTests : IDisposable
     }
 
     [Fact]
-    public async Task List_returns_companies_ordered_by_name()
+    public async Task Create_publishes_company_created_for_the_registering_user()
     {
-        await _handlers.ACompanyAsync(taxId: "4200000000001", name: "Zenica Metal d.o.o.");
-        await _handlers.ACompanyAsync(taxId: "4200000000002", name: "Bosna Trade d.o.o.");
+        var result = await _handlers.CreateCompany.HandleAsync(Commands.CreateCompany(name: "Firma d.o.o."), CancellationToken.None);
 
-        var companies = await _handlers.ListCompanies.HandleAsync(new ListCompanies(), CancellationToken.None);
-
-        Assert.Equal(["Bosna Trade d.o.o.", "Zenica Metal d.o.o."], companies.Select(c => c.Name));
+        var created = Assert.IsType<CompanyCreated>(Assert.Single(await OutboxEventsAsync()));
+        Assert.Equal(result.Value.Value, created.CompanyId);
+        Assert.Equal("Firma d.o.o.", created.Name);
+        Assert.Equal(Commands.RegisteringUserId, created.CreatedByUserId);
+        Assert.Equal(_handlers.Clock.UtcNow, created.OccurredAt);
     }
+
+    [Fact]
+    public async Task Failed_create_publishes_nothing()
+    {
+        await _handlers.CreateCompany.HandleAsync(Commands.CreateCompany(name: ""), CancellationToken.None);
+
+        Assert.Empty(await OutboxEventsAsync());
+    }
+
+    [Fact]
+    public async Task Update_publishes_company_updated_with_new_name()
+    {
+        var companyId = await _handlers.ACompanyAsync();
+
+        await _handlers.UpdateCompany.HandleAsync(Commands.UpdateCompany(companyId, name: "Novo ime d.o.o."), CancellationToken.None);
+
+        var updated = Assert.Single((await OutboxEventsAsync()).OfType<CompanyUpdated>());
+        Assert.Equal(companyId.Value, updated.CompanyId);
+        Assert.Equal("Novo ime d.o.o.", updated.Name);
+    }
+
+    [Fact]
+    public async Task Get_returns_company()
+    {
+        var companyId = await _handlers.ACompanyAsync(name: "Bosna Trade d.o.o.");
+
+        var result = await _handlers.GetCompany.HandleAsync(new GetCompany(companyId), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(companyId.Value, result.Value.Id);
+        Assert.Equal("Bosna Trade d.o.o.", result.Value.Name);
+    }
+
+    [Fact]
+    public async Task Get_unknown_company_is_not_found()
+    {
+        var result = await _handlers.GetCompany.HandleAsync(new GetCompany(CompanyId.New()), CancellationToken.None);
+
+        ResultAssert.Fails(result, CoreErrors.CompanyNotFound);
+    }
+
+    private async Task<IReadOnlyList<object>> OutboxEventsAsync() =>
+        (await _database.Query().Set<OutboxMessage>().OrderBy(message => message.OccurredAt).ToListAsync())
+            .Select(message => JsonSerializer.Deserialize(message.Content, typeof(CompanyCreated).Assembly.GetType(message.Type)!, JsonSerializerOptions.Web)!)
+            .ToList();
 }

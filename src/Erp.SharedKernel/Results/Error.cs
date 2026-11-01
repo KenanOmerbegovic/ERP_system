@@ -13,4 +13,6 @@ public record Error(string Code, string Message, ErrorType Type = ErrorType.Fail
     public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
 
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+
+    public static Error Unauthorized(string code, string message) => new(code, message, ErrorType.Unauthorized);
 }

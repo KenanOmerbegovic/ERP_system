@@ -10,6 +10,7 @@ public class ErrorTests
         Assert.Equal(ErrorType.Validation, Error.Validation("C", "M").Type);
         Assert.Equal(ErrorType.NotFound, Error.NotFound("C", "M").Type);
         Assert.Equal(ErrorType.Conflict, Error.Conflict("C", "M").Type);
+        Assert.Equal(ErrorType.Unauthorized, Error.Unauthorized("C", "M").Type);
         Assert.Equal(ErrorType.Failure, new Error("C", "M").Type);
     }
 

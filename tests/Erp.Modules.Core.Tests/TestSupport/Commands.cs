@@ -7,6 +7,9 @@ namespace Erp.Modules.Core.Tests.TestSupport;
 /// <summary>Valid commands with overridable fields.</summary>
 internal static class Commands
 {
+    /// <summary>The user registering companies in tests.</summary>
+    public static readonly Guid RegisteringUserId = Guid.Parse("0190a000-0000-7000-8000-000000000001");
+
     public static CreateCompany CreateCompany(
         string name = "Firma d.o.o.",
         string taxId = "4200000000001",
@@ -14,7 +17,7 @@ internal static class Commands
         string address = "Ferhadija 1",
         string postalCode = "71000",
         string city = "Sarajevo") =>
-        new(name, taxId, vatNumber, address, postalCode, city);
+        new(RegisteringUserId, name, taxId, vatNumber, address, postalCode, city);
 
     public static UpdateCompany UpdateCompany(
         CompanyId companyId,

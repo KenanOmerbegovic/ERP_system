@@ -1,16 +1,31 @@
-@Erp.Api_HostAddress = http://localhost:5094
-# Paste an id returned by "Create company" / "Create unit of measure".
+@Erp.Api_HostAddress = https://localhost:7150
+# 1. Get a key: dotnet run --project src/Erp.Api -- issue-registration-key
+@registrationKey = XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+# 2. Paste the accessToken from "Register account" or "Login", and ids returned below.
+@accessToken = paste-access-token
+@refreshToken = paste-refresh-token
 @companyId = 00000000-0000-0000-0000-000000000000
 @unitId = 00000000-0000-0000-0000-000000000000
+@roleId = 00000000-0000-0000-0000-000000000000
 
-### OpenAPI document (Development only)
+### OpenAPI document (Development only; also written to /openapi on build)
 GET {{Erp.Api_HostAddress}}/openapi/v1.json
 
-### List companies
-GET {{Erp.Api_HostAddress}}/api/companies
+### Register account (registration step 1). tokenDelivery "Body" returns the refresh token; browsers use "Cookie".
+POST {{Erp.Api_HostAddress}}/api/registration
+Content-Type: application/json
 
-### Create company
+{
+  "registrationKey": "{{registrationKey}}",
+  "email": "admin@bosna-trade.ba",
+  "displayName": "Amra Hadžić",
+  "password": "change this password",
+  "tokenDelivery": "Body"
+}
+
+### Create company (registration step 2); then GET /api/me until it lists the company
 POST {{Erp.Api_HostAddress}}/api/companies
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -22,17 +37,72 @@ Content-Type: application/json
   "city": "Sarajevo"
 }
 
+### Current user, companies and permissions
+GET {{Erp.Api_HostAddress}}/api/me
+Authorization: Bearer {{accessToken}}
+
+### Login
+POST {{Erp.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@bosna-trade.ba", "password": "change this password", "tokenDelivery": "Body" }
+
+### Refresh (rotates the refresh token; the old one stops working)
+POST {{Erp.Api_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshToken}}", "tokenDelivery": "Body" }
+
+### Logout
+POST {{Erp.Api_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshToken}}" }
+
+### Get company
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}
+Authorization: Bearer {{accessToken}}
+
+### Permissions a role can grant
+GET {{Erp.Api_HostAddress}}/api/permissions
+Authorization: Bearer {{accessToken}}
+
+### Create role
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/roles
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "name": "Knjigovođa", "permissions": ["core.business-partners.read", "core.business-partners.write", "core.articles.read"] }
+
+### List roles
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/roles
+Authorization: Bearer {{accessToken}}
+
+### Create user (initial password set by the administrator)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/users
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{ "email": "emir@bosna-trade.ba", "displayName": "Emir Kovač", "password": "initial password 1", "roleIds": ["{{roleId}}"] }
+
+### List users
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/users
+Authorization: Bearer {{accessToken}}
+
 ### Create unit of measure
 POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/units-of-measure
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 { "code": "kom", "name": "Komad" }
 
 ### List units of measure
 GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/units-of-measure
+Authorization: Bearer {{accessToken}}
 
 ### Create business partner (countryCode omitted = domestic)
 POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/business-partners
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -49,9 +119,11 @@ Content-Type: application/json
 
 ### List business partners
 GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/business-partners?search=kup&page=1&pageSize=50
+Authorization: Bearer {{accessToken}}
 
 ### Create article
 POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/articles
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -64,3 +136,4 @@ Content-Type: application/json
 
 ### List articles
 GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/articles?page=1&pageSize=50
+Authorization: Bearer {{accessToken}}

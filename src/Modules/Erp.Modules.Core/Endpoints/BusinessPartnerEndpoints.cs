@@ -1,6 +1,9 @@
 using Erp.Modules.Core.Application.BusinessPartners;
 using Erp.Modules.Core.Application.Common;
+using Erp.Modules.Core.Contracts;
 using Erp.Modules.Core.Contracts.BusinessPartners;
+using Erp.Modules.Core.Contracts.Common;
+using Erp.Modules.Identity.Contracts.Authorization;
 using Erp.SharedKernel.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +26,12 @@ internal static class BusinessPartnerEndpoints
             CancellationToken cancellationToken) =>
             HttpResults.Ok(await handler.HandleAsync(
                 new ListBusinessPartners(new CompanyId(companyId), search, page ?? 1, pageSize ?? Paging.DefaultPageSize),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("ListBusinessPartners")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.BusinessPartnersRead))
+            .Produces<PagedResponse<BusinessPartnerResponse>>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", async (
             Guid companyId,
@@ -44,7 +52,12 @@ internal static class BusinessPartnerEndpoints
                     request.IsCustomer,
                     request.IsSupplier,
                     request.IsActive),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("CreateBusinessPartner")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.BusinessPartnersWrite))
+            .Produces<CreatedResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{businessPartnerId:guid}", async (
             Guid companyId,
@@ -67,6 +80,12 @@ internal static class BusinessPartnerEndpoints
                     request.IsCustomer,
                     request.IsSupplier,
                     request.IsActive),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("UpdateBusinessPartner")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.BusinessPartnersWrite))
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 }

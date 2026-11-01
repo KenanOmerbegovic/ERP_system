@@ -27,6 +27,14 @@ public class ModuleBoundaryTests
             "Contracts must not depend on any module's internals");
     }
 
+    [Fact]
+    public void Messaging_does_not_reference_any_module()
+    {
+        var modules = ModuleNames.SelectMany(module => new[] { ModuleAssembly(module), ContractsAssembly(module) });
+
+        ArchAssert.DoesNotReference(MessagingAssembly, modules, "Erp.Messaging is a building block every module uses, so it knows no module");
+    }
+
     [Theory]
     [MemberData(nameof(ModuleData), MemberType = typeof(SolutionAssemblies))]
     public void Every_module_has_a_contracts_project(string module)

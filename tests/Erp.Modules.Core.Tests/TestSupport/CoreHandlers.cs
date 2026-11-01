@@ -13,11 +13,13 @@ internal sealed class CoreHandlers(CoreDbContext db)
 {
     private static readonly FakeTaxIdentifierRules TaxRules = FakeTaxIdentifierRules.Instance;
 
-    public CreateCompanyHandler CreateCompany { get; } = new(db, new CreateCompanyValidator(TaxRules));
+    public FakeClock Clock { get; } = new();
 
-    public UpdateCompanyHandler UpdateCompany { get; } = new(db, new UpdateCompanyValidator(TaxRules));
+    public CreateCompanyHandler CreateCompany => new(db, new CreateCompanyValidator(TaxRules), Clock);
 
-    public ListCompaniesHandler ListCompanies { get; } = new(db);
+    public UpdateCompanyHandler UpdateCompany => new(db, new UpdateCompanyValidator(TaxRules), Clock);
+
+    public GetCompanyHandler GetCompany { get; } = new(db);
 
     public CreateBusinessPartnerHandler CreateBusinessPartner { get; } = new(db, new CreateBusinessPartnerValidator(TaxRules), TaxRules);
 

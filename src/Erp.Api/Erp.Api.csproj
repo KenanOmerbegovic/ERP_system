@@ -1,15 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <!-- The OpenAPI document is written to /openapi on every build; the client generates its API code from it. -->
+  <PropertyGroup>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)\..\..\openapi</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Erp.Localization.BiH\Erp.Localization.BiH.csproj" />
     <ProjectReference Include="..\Modules\Erp.Modules.Core\Erp.Modules.Core.csproj" />
+    <ProjectReference Include="..\Modules\Erp.Modules.Identity\Erp.Modules.Identity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Erp.Integration.Tests" />
   </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using Erp.Messaging;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Endpoints;
 using Erp.Modules.Core.Infrastructure;
@@ -11,7 +12,8 @@ namespace Erp.Modules.Core;
 
 /// <summary>
 /// Composition entry points for the host. The host must also register an
-/// <see cref="ITaxIdentifierRules"/> implementation (country localization).
+/// <see cref="ITaxIdentifierRules"/> implementation (country localization), an
+/// <see cref="SharedKernel.Time.IClock"/>, and the Identity module, which authorizes Core's endpoints.
 /// </summary>
 public static class CoreModule
 {
@@ -26,6 +28,7 @@ public static class CoreModule
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", CoreDbContext.Schema))
             .UseSnakeCaseNamingConvention());
         services.AddScoped<ICoreDbContext>(provider => provider.GetRequiredService<CoreDbContext>());
+        services.AddOutboxProcessor<CoreDbContext>();
 
         services.AddValidatorsFromAssembly(typeof(CoreModule).Assembly, includeInternalTypes: true);
 

@@ -12,7 +12,7 @@ public class LocalizationTests
     {
         get
         {
-            var data = new TheoryData<string> { SharedKernelAssembly };
+            var data = new TheoryData<string> { SharedKernelAssembly, MessagingAssembly };
             foreach (var module in ModuleNames)
             {
                 data.Add(ModuleAssembly(module));

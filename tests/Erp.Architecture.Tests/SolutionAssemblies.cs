@@ -15,6 +15,7 @@ internal static partial class SolutionAssemblies
     public const string ApiAssembly = "Erp.Api";
     public const string SharedKernelAssembly = "Erp.SharedKernel";
     public const string LocalizationBiHAssembly = "Erp.Localization.BiH";
+    public const string MessagingAssembly = "Erp.Messaging";
 
     public static IReadOnlyList<string> ModuleNames { get; } =
         Directory.GetFiles(AppContext.BaseDirectory, "Erp.Modules.*.dll")

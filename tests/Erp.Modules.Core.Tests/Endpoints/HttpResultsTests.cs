@@ -13,6 +13,7 @@ public class HttpResultsTests
     [InlineData(ErrorType.Validation, 400)]
     [InlineData(ErrorType.NotFound, 404)]
     [InlineData(ErrorType.Conflict, 409)]
+    [InlineData(ErrorType.Unauthorized, 401)]
     [InlineData(ErrorType.Failure, 422)]
     public void Error_type_decides_status_code(ErrorType type, int statusCode)
     {

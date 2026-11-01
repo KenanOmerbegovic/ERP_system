@@ -1,7 +1,10 @@
 using Erp.Modules.Core.Application.Articles;
 using Erp.Modules.Core.Application.Common;
+using Erp.Modules.Core.Contracts;
 using Erp.Modules.Core.Contracts.Articles;
+using Erp.Modules.Core.Contracts.Common;
 using Erp.Modules.Core.Domain.Articles;
+using Erp.Modules.Identity.Contracts.Authorization;
 using Erp.SharedKernel.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +27,12 @@ internal static class ArticleEndpoints
             CancellationToken cancellationToken) =>
             HttpResults.Ok(await handler.HandleAsync(
                 new ListArticles(new CompanyId(companyId), search, page ?? 1, pageSize ?? Paging.DefaultPageSize),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("ListArticles")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.ArticlesRead))
+            .Produces<PagedResponse<ArticleResponse>>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", async (
             Guid companyId,
@@ -39,7 +47,12 @@ internal static class ArticleEndpoints
                     ToType(request.Type),
                     request.UnitOfMeasureId,
                     request.IsActive),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("CreateArticle")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.ArticlesWrite))
+            .Produces<CreatedResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{articleId:guid}", async (
             Guid companyId,
@@ -56,7 +69,13 @@ internal static class ArticleEndpoints
                     ToType(request.Type),
                     request.UnitOfMeasureId,
                     request.IsActive),
-                cancellationToken)));
+                cancellationToken)))
+            .WithName("UpdateArticle")
+            .RequireAuthorization(PermissionPolicy.For(CorePermissions.ArticlesWrite))
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
     }
 
     // Undefined values pass through unchanged so the validator reports them.

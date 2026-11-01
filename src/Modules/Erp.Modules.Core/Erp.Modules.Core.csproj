@@ -14,8 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Erp.Messaging\Erp.Messaging.csproj" />
     <ProjectReference Include="..\..\Erp.SharedKernel\Erp.SharedKernel.csproj" />
     <ProjectReference Include="..\Erp.Modules.Core.Contracts\Erp.Modules.Core.Contracts.csproj" />
+    <ProjectReference Include="..\Erp.Modules.Identity.Contracts\Erp.Modules.Identity.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

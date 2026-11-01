@@ -1,7 +1,9 @@
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Application.Common;
+using Erp.Modules.Core.Contracts.Companies;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Results;
+using Erp.SharedKernel.Time;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +26,7 @@ internal sealed class UpdateCompanyValidator : AbstractValidator<UpdateCompany>
     }
 }
 
-public sealed class UpdateCompanyHandler(ICoreDbContext db, IValidator<UpdateCompany> validator)
+public sealed class UpdateCompanyHandler(ICoreDbContext db, IValidator<UpdateCompany> validator, IClock clock)
 {
     public async Task<Result> HandleAsync(UpdateCompany command, CancellationToken cancellationToken)
     {
@@ -47,6 +49,7 @@ public sealed class UpdateCompanyHandler(ICoreDbContext db, IValidator<UpdateCom
         }
 
         company.Update(command.Name, taxId, command.VatNumber, command.Address, command.PostalCode, command.City);
+        db.AddIntegrationEvent(new CompanyUpdated(Guid.CreateVersion7(), clock.UtcNow, company.Id.Value, company.Name));
         await db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

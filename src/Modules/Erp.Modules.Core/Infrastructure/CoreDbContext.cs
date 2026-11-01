@@ -1,9 +1,11 @@
+using Erp.Messaging.Outbox;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Domain.Articles;
 using Erp.Modules.Core.Domain.BusinessPartners;
 using Erp.Modules.Core.Domain.Companies;
 using Erp.Modules.Core.Domain.UnitsOfMeasure;
 using Erp.SharedKernel.Domain;
+using Erp.SharedKernel.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -21,10 +23,13 @@ public sealed class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbC
 
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
 
+    public void AddIntegrationEvent(IIntegrationEvent integrationEvent) => Set<OutboxMessage>().Add(OutboxMessage.From(integrationEvent));
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreDbContext).Assembly);
+        modelBuilder.AddOutbox();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -13,4 +13,7 @@ public enum ErrorType
 
     /// <summary>The operation conflicts with existing data, e.g. a duplicate code.</summary>
     Conflict,
+
+    /// <summary>The caller could not be authenticated, e.g. wrong credentials or an invalid token.</summary>
+    Unauthorized,
 }
