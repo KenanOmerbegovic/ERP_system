@@ -27,21 +27,29 @@ public sealed partial class OutboxProcessor<TDbContext>(
             return;
         }
 
-        using var timer = new PeriodicTimer(options.Value.PollInterval);
-        do
+        // Polls often while there is work and backs off while the outbox is empty (or the database is down).
+        var delay = options.Value.PollInterval;
+        while (!stoppingToken.IsCancellationRequested)
         {
+            var foundMessages = false;
             try
             {
-                while (await ProcessBatchAsync(stoppingToken) == options.Value.BatchSize)
+                int count;
+                do
                 {
+                    count = await ProcessBatchAsync(stoppingToken);
+                    foundMessages |= count > 0;
                 }
+                while (count == options.Value.BatchSize);
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
                 LogBatchFailed(logger, exception, typeof(TDbContext).Name);
             }
+
+            delay = options.Value.NextPollDelay(delay, foundMessages);
+            await Task.Delay(delay, stoppingToken);
         }
-        while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
     /// <summary>Processes one batch and returns how many messages it contained.</summary>
