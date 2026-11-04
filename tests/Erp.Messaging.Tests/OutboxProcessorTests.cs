@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Erp.Messaging.Outbox;
 using Erp.SharedKernel.Messaging;
 using Erp.SharedKernel.Time;
@@ -108,9 +109,46 @@ public sealed class OutboxProcessorTests : IDisposable
         Assert.Equal(Now, message.OccurredAt);
     }
 
+    [Fact]
+    public void Idle_polling_doubles_up_to_the_maximum_and_snaps_back_when_messages_appear()
+    {
+        var options = CreateOptions(maxAttempts: 5);
+        var delays = new List<TimeSpan>();
+        var delay = options.PollInterval;
+        foreach (var foundMessages in new[] { false, false, false, false, false, true, false })
+        {
+            delay = options.NextPollDelay(delay, foundMessages);
+            delays.Add(delay);
+        }
+
+        Assert.Equal([2, 4, 8, 10, 10, 1, 2], delays.Select(value => value.TotalSeconds));
+    }
+
+    [Fact]
+    public void Maximum_idle_interval_shorter_than_poll_interval_is_rejected()
+    {
+        var options = CreateOptions(maxAttempts: 5);
+        options.MaxIdlePollInterval = TimeSpan.FromMilliseconds(500);
+
+        var results = new List<ValidationResult>();
+        var valid = Validator.TryValidateObject(
+            options, new ValidationContext(options), results, validateAllProperties: true);
+
+        Assert.False(valid);
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OutboxOptions.MaxIdlePollInterval)));
+    }
+
+    private static OutboxOptions CreateOptions(int maxAttempts) => new()
+    {
+        PollInterval = TimeSpan.FromSeconds(1),
+        MaxIdlePollInterval = TimeSpan.FromSeconds(10),
+        BatchSize = 10,
+        MaxAttempts = maxAttempts,
+    };
+
     private OutboxProcessor<TestDbContext> Processor(int maxAttempts = 5) => new(
         _services.GetRequiredService<IServiceScopeFactory>(),
-        Options.Create(new OutboxOptions { PollInterval = TimeSpan.FromSeconds(1), BatchSize = 10, MaxAttempts = maxAttempts }),
+        Options.Create(CreateOptions(maxAttempts)),
         NullLogger<OutboxProcessor<TestDbContext>>.Instance);
 
     private async Task AddAsync(IIntegrationEvent integrationEvent)

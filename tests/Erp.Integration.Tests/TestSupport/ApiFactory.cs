@@ -66,6 +66,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             ["Identity:Jwt:SigningKey"] = SigningKey,
             ["Identity:RateLimiting:PermitLimit"] = "1000",
             ["Messaging:Outbox:PollInterval"] = "00:00:00.100",
+            ["Messaging:Outbox:MaxIdlePollInterval"] = "00:00:00.200",
         });
     }
 
