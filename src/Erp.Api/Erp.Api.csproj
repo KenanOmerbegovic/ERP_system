@@ -6,6 +6,11 @@
     <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
   </PropertyGroup>
 
+  <!-- Local secrets (the JWT signing key) live in dotnet user-secrets, outside the repository; see README.md. -->
+  <PropertyGroup>
+    <UserSecretsId>erp-api-6f1c9e2a-4b7d-4e38-9a51-d2c0b8f3e7a4</UserSecretsId>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">

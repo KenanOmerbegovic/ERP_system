@@ -5,7 +5,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="Erp.Seeder.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bogus" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Erp.Localization.BiH\Erp.Localization.BiH.csproj" />
     <ProjectReference Include="..\..\src\Modules\Erp.Modules.Core\Erp.Modules.Core.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Identity\Erp.Modules.Identity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

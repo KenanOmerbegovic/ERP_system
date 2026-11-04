@@ -67,4 +67,13 @@ public class SecurityTests
     {
         Assert.Equal(valid, JwtOptions.HasValidSigningKey(new JwtOptions { Issuer = "i", Audience = "a", SigningKey = key }));
     }
+
+    [Theory]
+    [InlineData("dev-only-signing-key-change-outside-development-0123456789", true)]
+    [InlineData(" openapi-generation-only-not-a-real-signing-key ", true)]
+    [InlineData("a-key-nobody-has-published-anywhere-0123456789", false)]
+    public void Published_placeholder_keys_are_recognized(string key, bool placeholder)
+    {
+        Assert.Equal(placeholder, JwtOptions.IsKnownPlaceholder(new JwtOptions { Issuer = "i", Audience = "a", SigningKey = key }));
+    }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Erp.Api.OpenApi;
 using Erp.Localization.BiH.Core;
@@ -7,6 +8,7 @@ using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
 using Erp.SharedKernel.Time;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +19,7 @@ if (Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider")
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {
         [$"ConnectionStrings:{CoreModule.ConnectionStringName}"] = "Host=openapi-generation-only",
-        ["Identity:Jwt:SigningKey"] = "openapi-generation-only-not-a-real-signing-key",
+        ["Identity:Jwt:SigningKey"] = RandomNumberGenerator.GetHexString(64),
         ["Messaging:Outbox:Enabled"] = "false",
     });
 }
@@ -45,6 +47,9 @@ builder.Services.AddIdentityModule(builder.Configuration, CorePermissions.All);
 builder.Services.AddCoreModule(builder.Configuration);
 
 var app = builder.Build();
+
+// Check configuration (e.g. the JWT signing key) before migrating or running a command, not only when the host starts.
+app.Services.GetRequiredService<IStartupValidator>().Validate();
 
 if (app.Environment.IsDevelopment())
 {

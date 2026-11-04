@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using Erp.Integration.Tests.TestSupport;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Core.Contracts.Articles;
 using Erp.Modules.Core.Contracts.Common;
 using Erp.Modules.Identity.Contracts.Roles;
 using Erp.Modules.Identity.Contracts.Users;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Erp.Integration.Tests;
 
@@ -30,6 +33,22 @@ public sealed class AuthorizationTests(ApiFactory factory)
             "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTkwYTAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEifQ.c2lnbmF0dXJl");
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/me")).StatusCode);
+    }
+
+    [Fact]
+    public async Task An_expired_access_token_is_rejected()
+    {
+        var (admin, _, _) = await factory.RegisterCompanyAsync("4200000000205");
+        var me = await (await admin.GetAsync("/api/me")).ReadAsync<CurrentUserResponse>();
+        var now = DateTime.UtcNow;
+
+        var valid = factory.CreateBrowserClient();
+        valid.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken(me.UserId, now.AddMinutes(-1), now.AddMinutes(14)));
+        var expired = factory.CreateBrowserClient();
+        expired.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken(me.UserId, now.AddMinutes(-20), now.AddMinutes(-5)));
+
+        Assert.Equal(HttpStatusCode.OK, (await valid.GetAsync("/api/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await expired.GetAsync("/api/me")).StatusCode);
     }
 
     [Fact]
@@ -85,4 +104,18 @@ public sealed class AuthorizationTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Contains("User.DuplicateEmail", await duplicate.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
+
+    /// <summary>Signed like the API's own tokens (appsettings.json issuer and audience), with a chosen lifetime.</summary>
+    private static string AccessToken(Guid userId, DateTime issuedAt, DateTime expiresAt) =>
+        new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = "erp-api",
+            Audience = "erp-client",
+            IssuedAt = issuedAt,
+            NotBefore = issuedAt,
+            Expires = expiresAt,
+            Claims = new Dictionary<string, object> { ["sub"] = userId.ToString() },
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ApiFactory.SigningKey)), SecurityAlgorithms.HmacSha256),
+        });
 }

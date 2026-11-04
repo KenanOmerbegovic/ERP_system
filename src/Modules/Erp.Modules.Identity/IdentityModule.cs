@@ -54,7 +54,8 @@ public static class IdentityModule
         AddOptions<LockoutOptions>(services, LockoutOptions.SectionName);
         AddOptions<RegistrationOptions>(services, RegistrationOptions.SectionName);
         AddOptions<JwtOptions>(services, JwtOptions.SectionName)
-            .Validate(JwtOptions.HasValidSigningKey, $"{JwtOptions.SectionName}:SigningKey must be at least {JwtOptions.MinSigningKeyBytes} bytes.");
+            .Validate(JwtOptions.HasValidSigningKey, $"{JwtOptions.SectionName}:SigningKey must be at least {JwtOptions.MinSigningKeyBytes} bytes.")
+            .Validate(options => !JwtOptions.IsKnownPlaceholder(options), $"{JwtOptions.SectionName}:SigningKey is a published placeholder; set a secret key (see README.md).");
 
         services.AddSingleton(new PermissionCatalog([.. IdentityPermissions.All, .. modulePermissions]));
         services.AddScoped<MemberPermissions>();

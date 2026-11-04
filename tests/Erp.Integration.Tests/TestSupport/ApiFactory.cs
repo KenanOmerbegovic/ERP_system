@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Erp.Modules.Core;
 using Erp.Modules.Identity;
 using Erp.Modules.Identity.Application.Registration;
@@ -17,6 +18,8 @@ namespace Erp.Integration.Tests.TestSupport;
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string AllowedOrigin = "https://client.test";
+    /// <summary>New for every test run, so no committed key can sign tokens the API accepts.</summary>
+    public static readonly string SigningKey = RandomNumberGenerator.GetHexString(64);
 
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("pgvector/pgvector:pg17").Build();
 
@@ -60,7 +63,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         Override(builder, new Dictionary<string, string?>
         {
-            ["Identity:Jwt:SigningKey"] = "integration-test-signing-key-thirty-two-bytes-plus",
+            ["Identity:Jwt:SigningKey"] = SigningKey,
             ["Identity:RateLimiting:PermitLimit"] = "1000",
             ["Messaging:Outbox:PollInterval"] = "00:00:00.100",
         });

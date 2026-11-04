@@ -53,6 +53,15 @@ added later — do not add it or mobile-specific code now.
   (not 5432: a native Windows PostgreSQL service uses that port on this machine).
 - Dev connection string: Host=localhost;Port=5433;Database=erp_dev;Username=erp;Password=erp_dev_password
 - Dev credentials are for local use only; never use them outside Development.
+- JWT signing key: never in appsettings or the repo. Locally it is in dotnet user-secrets (one-time setup in README.md);
+  the API refuses to start without a real key. Tests generate their own random key.
 - First company: `dotnet run --project src/Erp.Api -- issue-registration-key` prints a key; register with it
   (`POST /api/registration`, then `POST /api/companies`). See src/Erp.Api/Erp.Api.http.
-- `dotnet test` needs Docker running (Erp.Integration.Tests uses Testcontainers).
+- `dotnet test` needs Docker running (Erp.Integration.Tests and Erp.Seeder.Tests use Testcontainers).
+- Seeder: `dotnet run --project tools/Erp.Seeder -- --size small|full --password <password> [--reset]`
+  (or set ERP_SEED_PASSWORD). It prints the seeded logins; a second run needs --reset, which wipes the core and identity schemas.
+- Client: start the API with `dotnet run --project src/Erp.Api` (http://localhost:5094), then in /client
+  `npm run dev` (web, :9000) or `npm run dev:electron` (desktop, :9300). The dev server proxies /api to the API.
+- After changing an endpoint or contract: `dotnet build` (rewrites openapi/Erp.Api.json), then in /client
+  `npm run api:generate`. Generated code is in client/src/api/generated; never edit it.
+- Client checks: `npm run lint:check` and `npm run typecheck` in /client.
