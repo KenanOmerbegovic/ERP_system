@@ -65,3 +65,7 @@ added later — do not add it or mobile-specific code now.
 - After changing an endpoint or contract: `dotnet build` (rewrites openapi/Erp.Api.json), then in /client
   `npm run api:generate`. Generated code is in client/src/api/generated; never edit it.
 - Client checks: `npm run lint:check` and `npm run typecheck` in /client.
+- CI (.github/workflows): backend.yml (build with warnings as errors, test, OpenAPI document committed up to date),
+  client-web.yml (generated client up to date, lint, type check, SPA build; deploys to GitHub Pages from main),
+  client-desktop.yml (installers for Windows/macOS/Linux on v* tags or manual run). Commit openapi/Erp.Api.json
+  and client/src/api/generated together with the endpoint change, or CI fails.

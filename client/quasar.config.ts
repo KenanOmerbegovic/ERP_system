@@ -45,10 +45,13 @@ export default defineConfig((ctx) => {
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
       // filenameBasedRouting: true,
 
+      // Hash mode: static hosts (GitHub Pages) and packaged Electron (file://) have no server-side
+      // fallback to index.html, so every route has to live after the "#".
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
 
-      // publicPath: '/',
+      // Where the SPA is served from, e.g. /ERP_system/ on GitHub Pages (set by .github/workflows/client-web.yml).
+      publicPath: process.env.ERP_PUBLIC_PATH ?? '/',
       // define: {},
 
       // Empty: same origin. In development the dev server proxies /api (see devServer.proxy).
@@ -236,7 +239,9 @@ export default defineConfig((ctx) => {
       // specify the debugging port to use for the Electron app when running in development mode
       inspectPort: 5858,
 
-      bundler: 'packager', // 'packager' or 'builder'
+      // electron-builder makes installers (packager only makes app folders); used by
+      // .github/workflows/client-desktop.yml, one runner per OS.
+      bundler: 'builder', // 'packager' or 'builder'
 
       packager: {
         // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
@@ -253,6 +258,12 @@ export default defineConfig((ctx) => {
         // https://www.electron.build/configuration
 
         appId: 'erp-client',
+        artifactName: 'erp-${version}-${os}-${arch}.${ext}',
+        // Unsigned for now (see docs/open-decisions.md): Windows SmartScreen and macOS Gatekeeper warn on first start.
+        win: { target: 'nsis' },
+        nsis: { oneClick: false, allowToChangeInstallationDirectory: true },
+        mac: { target: [{ target: 'dmg', arch: ['x64', 'arm64'] }], identity: null },
+        linux: { target: 'AppImage', category: 'Office' },
       },
     },
 
