@@ -1,0 +1,98 @@
+# Lint, type check and build the Quasar SPA; on main, deploy it to GitHub Pages.
+# The build uses the committed generated API client, so no API has to run.
+name: Client (web)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - client/**
+      - openapi/Erp.Api.json
+      - .github/workflows/client-web.yml
+  pull_request:
+    paths:
+      - client/**
+      - openapi/Erp.Api.json
+      - .github/workflows/client-web.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            client/src-electron/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Lint, type check and build also check src-electron/, which needs Electron's type declarations.
+      - name: Install Electron types
+        run: npm ci
+        working-directory: client/src-electron
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
+      - name: Check the generated API client matches openapi/Erp.Api.json
+        run: |
+          npm run api:generate
+          if [ -n "$(git status --porcelain -- src/api/generated)" ]; then
+            git status --short -- src/api/generated
+            echo "::error::client/src/api/generated is out of date. Run npm run api:generate in /client and commit it."
+            exit 1
+          fi
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build SPA
+        run: npx quasar build
+        env:
+          # Project pages are served from https://<owner>.github.io/<repo>/.
+          ERP_PUBLIC_PATH: /${{ github.event.repository.name }}/
+          # Empty until the API is hosted (see docs/open-decisions.md): the page loads, but sign-in cannot work.
+          ERP_API_URL: ${{ vars.ERP_API_URL }}
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: client/dist/spa
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

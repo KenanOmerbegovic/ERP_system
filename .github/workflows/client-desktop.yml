@@ -1,0 +1,70 @@
+# Build the Electron installers (Windows NSIS, macOS DMG for x64 and arm64, Linux AppImage), one runner per OS,
+# and upload them as workflow artifacts. Targets are in client/quasar.config.ts (electron.builder).
+# The installers are not code-signed yet (see docs/open-decisions.md).
+name: Client (desktop)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          - os: macos-latest
+            name: macos
+          - os: ubuntu-latest
+            name: linux
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            client/src-electron/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Electron and electron-builder
+        run: npm ci
+        working-directory: client/src-electron
+
+      - name: Take the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
+      - name: Build installers
+        run: npx quasar build -m electron --publish never
+        env:
+          # Packaged apps load from file://, so they need the API's absolute URL (see docs/open-decisions.md).
+          ERP_API_URL: ${{ vars.ERP_API_URL }}
+          # No signing certificate yet: stop electron-builder looking for one in the keychain.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erp-desktop-${{ matrix.name }}
+          path: |
+            client/dist/electron/Packaged/*.exe
+            client/dist/electron/Packaged/*.dmg
+            client/dist/electron/Packaged/*.AppImage
+          if-no-files-found: error
+          retention-days: 30

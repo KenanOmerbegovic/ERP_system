@@ -1,0 +1,63 @@
+# Restore, build (warnings are errors) and test the .NET solution.
+# Integration and seeder tests start PostgreSQL with Testcontainers, which uses the runner's Docker.
+# No user-secrets: tests set their own random JWT signing key (tests/Erp.Integration.Tests/TestSupport/ApiFactory.cs).
+name: Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', '**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore Erp.sln
+
+      - name: Build
+        run: dotnet build Erp.sln --no-restore --configuration Release -warnaserror
+
+      # The build rewrites openapi/Erp.Api.json; the client is generated from the committed copy.
+      - name: Check the OpenAPI document is committed up to date
+        run: |
+          git diff --exit-code -- openapi/ || {
+            echo "::error::openapi/Erp.Api.json is out of date. Run dotnet build, then npm run api:generate in /client, and commit both."
+            exit 1
+          }
+
+      - name: Test
+        run: dotnet test Erp.sln --no-build --configuration Release --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          retention-days: 7
