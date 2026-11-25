@@ -6,8 +6,14 @@ Erp.Api over HTTPS. PostgreSQL, EF Core, one DbContext and schema per module.
 Target market: Bosnia and Herzegovina. UI language: Bosnian. Code: English.
 
 ## Architecture rules (enforced by Erp.Architecture.Tests — never weaken them)
-- Modules reference other modules only via their .Contracts project.
-- Cross-module communication = integration events through the outbox.
+- Modules reference other modules only via their .Contracts project, never their implementation project.
+- Cross-module communication is event-based (integration events through the outbox), with one exception:
+  a module may expose synchronous queries and commands as interfaces in its .Contracts project, implemented
+  inside the module, when the caller needs the answer at once — e.g. a stock issue that must be able to fail
+  with Stock.Insufficient before the caller confirms its own document.
+  - Such commands must be idempotent: they take an idempotency key (source module + source document id),
+    and a repeated call returns the first result instead of acting twice.
+  - Everything else (notifications, reactions to what another module did) stays event-based.
 - Inside a module: Endpoints -> Application -> Domain. Domain depends only on SharedKernel.
   Infrastructure (EF Core DbContext, mappings) implements Application interfaces; Application never depends on Infrastructure.
 - Country rules live only in Erp.Localization.BiH behind module-defined interfaces.
@@ -69,3 +75,4 @@ added later — do not add it or mobile-specific code now.
   client-web.yml (generated client up to date, lint, type check, SPA build; deploys to GitHub Pages from main),
   client-desktop.yml (installers for Windows/macOS/Linux on v* tags or manual run). Commit openapi/Erp.Api.json
   and client/src/api/generated together with the endpoint change, or CI fails.
+  - Requirements live in docs/requirements.md. Reference their IDs in branch names, commits, PRs and test names, and update their Status when implemented.

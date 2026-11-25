@@ -4,6 +4,8 @@ using Erp.Modules.Core.Contracts.Articles;
 using Erp.Modules.Core.Domain.Articles;
 using Erp.Modules.Core.Tests.TestSupport;
 using Erp.SharedKernel.Domain;
+using System.Text.Json;
+using Erp.Messaging.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace Erp.Modules.Core.Tests.Application;
@@ -27,7 +29,7 @@ public sealed class ArticleTests : IDisposable
         var unitId = await _handlers.AUnitAsync(companyId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, " A001 ", "Vijak M8", ArticleType.Goods, unitId, IsActive: true),
+            new CreateArticle(companyId, " A001 ", "Vijak M8", ArticleType.Goods, TrackingType.None, unitId, IsActive: true),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -47,7 +49,7 @@ public sealed class ArticleTests : IDisposable
         var foreignUnitId = await _handlers.AUnitAsync(otherId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Vijak", ArticleType.Goods, foreignUnitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Vijak", ArticleType.Goods, TrackingType.None, foreignUnitId, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.ArticleUnitOfMeasureNotFound);
@@ -59,7 +61,7 @@ public sealed class ArticleTests : IDisposable
         var companyId = await _handlers.ACompanyAsync();
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "", "", (ArticleType)99, Guid.Empty, IsActive: true),
+            new CreateArticle(companyId, "", "", (ArticleType)99, TrackingType.None, Guid.Empty, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.FailsValidation(result, "Code", "NotEmptyValidator");
@@ -72,7 +74,7 @@ public sealed class ArticleTests : IDisposable
     public async Task Create_in_unknown_company_is_not_found()
     {
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(CompanyId.New(), "A001", "Vijak", ArticleType.Goods, Guid.NewGuid(), IsActive: true),
+            new CreateArticle(CompanyId.New(), "A001", "Vijak", ArticleType.Goods, TrackingType.None, Guid.NewGuid(), IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.CompanyNotFound);
@@ -86,7 +88,7 @@ public sealed class ArticleTests : IDisposable
         await _handlers.AnArticleAsync(companyId, unitId, code: "A001");
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Drugi", ArticleType.Service, unitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Drugi", ArticleType.Service, TrackingType.None, unitId, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.DuplicateArticleCode);
@@ -205,4 +207,81 @@ public sealed class ArticleTests : IDisposable
 
         ResultAssert.Fails(result, CoreErrors.CompanyNotFound);
     }
+
+    [Fact]
+    public async Task Create_saves_tracking_type_and_publishes_ArticleCreated()
+    {
+        var companyId = await _handlers.ACompanyAsync();
+        var unitId = await _handlers.AUnitAsync(companyId);
+
+        var result = await _handlers.CreateArticle.HandleAsync(
+            new CreateArticle(companyId, "A001", "Laptop", ArticleType.Goods, TrackingType.Serial, unitId, IsActive: true),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(TrackingType.Serial, (await _database.Query().Articles.SingleAsync()).TrackingType);
+        var created = Assert.Single((await OutboxEventsAsync()).OfType<ArticleCreated>());
+        Assert.Equal(result.Value, created.ArticleId);
+        Assert.Equal(companyId.Value, created.CompanyId);
+        Assert.Equal(ArticleTracking.Serial, created.Tracking);
+        Assert.Equal(ArticleKind.Goods, created.Kind);
+        Assert.Equal(unitId, created.UnitOfMeasureId);
+    }
+
+    [Theory]
+    [InlineData(TrackingType.Lot)]
+    [InlineData(TrackingType.Serial)]
+    public async Task Create_rejects_tracked_service(TrackingType tracking)
+    {
+        var companyId = await _handlers.ACompanyAsync();
+        var unitId = await _handlers.AUnitAsync(companyId);
+
+        var result = await _handlers.CreateArticle.HandleAsync(
+            new CreateArticle(companyId, "U001", "Montaža", ArticleType.Service, tracking, unitId, IsActive: true),
+            CancellationToken.None);
+
+        ResultAssert.FailsValidation(result, "TrackingType", CoreErrors.ServiceCannotBeTracked.Code);
+    }
+
+    [Fact]
+    public async Task Update_keeps_tracking_type_and_publishes_ArticleUpdated()
+    {
+        var companyId = await _handlers.ACompanyAsync();
+        var unitId = await _handlers.AUnitAsync(companyId);
+        var created = await _handlers.CreateArticle.HandleAsync(
+            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, IsActive: true),
+            CancellationToken.None);
+
+        var result = await _handlers.UpdateArticle.HandleAsync(
+            new UpdateArticle(companyId, created.Value, "A001", "Brašno T-500", ArticleType.Goods, unitId, IsActive: false),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(TrackingType.Lot, (await _database.Query().Articles.SingleAsync()).TrackingType);
+        var updated = Assert.IsType<ArticleUpdated>((await OutboxEventsAsync())[^1]);
+        Assert.Equal("Brašno T-500", updated.Name);
+        Assert.Equal(ArticleTracking.Lot, updated.Tracking);
+        Assert.False(updated.IsActive);
+    }
+
+    [Fact]
+    public async Task Update_rejects_turning_tracked_article_into_service()
+    {
+        var companyId = await _handlers.ACompanyAsync();
+        var unitId = await _handlers.AUnitAsync(companyId);
+        var created = await _handlers.CreateArticle.HandleAsync(
+            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, IsActive: true),
+            CancellationToken.None);
+
+        var result = await _handlers.UpdateArticle.HandleAsync(
+            new UpdateArticle(companyId, created.Value, "A001", "Brašno", ArticleType.Service, unitId, IsActive: true),
+            CancellationToken.None);
+
+        ResultAssert.Fails(result, CoreErrors.ServiceCannotBeTracked);
+    }
+
+    private async Task<IReadOnlyList<object>> OutboxEventsAsync() =>
+        (await _database.Query().Set<OutboxMessage>().OrderBy(message => message.OccurredAt).ThenBy(message => message.Id).ToListAsync())
+            .Select(message => JsonSerializer.Deserialize(message.Content, typeof(ArticleCreated).Assembly.GetType(message.Type)!, JsonSerializerOptions.Web)!)
+            .ToList();
 }

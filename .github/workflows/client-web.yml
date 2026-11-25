@@ -65,6 +65,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Unit tests
+        run: npm run test
+
       - name: Build SPA
         run: npx quasar build
         env:

@@ -5,29 +5,42 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
-  ArticleRequest,
   AuthResponse,
   BusinessPartnerRequest,
   ChangePasswordRequest,
   CompanyRequest,
   CompanyResponse,
+  CreateArticleRequest,
   CreateUserRequest,
   CreatedResponse,
   CurrentUserResponse,
   ListArticlesParams,
   ListBusinessPartnersParams,
+  ListSerialNumbersParams,
+  ListStockBalancesParams,
+  ListStockDocumentsParams,
   LoginRequest,
   LogoutRequest,
   MemberResponse,
+  NumberSeriesRequest,
+  NumberSeriesResponse,
   PagedResponseOfArticleResponse,
   PagedResponseOfBusinessPartnerResponse,
+  PagedResponseOfSerialNumberResponse,
+  PagedResponseOfStockBalanceResponse,
+  PagedResponseOfStockDocumentSummaryResponse,
   RefreshRequest,
   RegisterAccountRequest,
   RoleRequest,
   RoleResponse,
+  StockDocumentRequest,
+  StockDocumentResponse,
   UnitOfMeasureRequest,
   UnitOfMeasureResponse,
-  UpdateMemberRequest
+  UpdateArticleRequest,
+  UpdateMemberRequest,
+  WarehouseRequest,
+  WarehouseResponse
 } from './model';
 
 import { apiRequest } from '../http';
@@ -300,14 +313,17 @@ export const listArticles = (
       options);
     }
 
+/**
+ * The tracking type (none, LOT, serial) is fixed once the article exists.
+ */
 export const createArticle = (
     companyId: string,
-    articleRequest: BodyType<ArticleRequest>,
+    createArticleRequest: BodyType<CreateArticleRequest>,
  options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
       return apiRequest<CreatedResponse>(
       {url: `/api/companies/${companyId}/articles`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: articleRequest
+      data: createArticleRequest
     },
       options);
     }
@@ -315,12 +331,186 @@ export const createArticle = (
 export const updateArticle = (
     companyId: string,
     articleId: string,
-    articleRequest: BodyType<ArticleRequest>,
+    updateArticleRequest: BodyType<UpdateArticleRequest>,
  options?: SecondParameter<typeof apiRequest<void>>,) => {
       return apiRequest<void>(
       {url: `/api/companies/${companyId}/articles/${articleId}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
-      data: articleRequest
+      data: updateArticleRequest
+    },
+      options);
+    }
+
+export const listWarehouses = (
+    companyId: string,
+ options?: SecondParameter<typeof apiRequest<WarehouseResponse[]>>,) => {
+      return apiRequest<WarehouseResponse[]>(
+      {url: `/api/companies/${companyId}/warehouses`, method: 'GET'
+    },
+      options);
+    }
+
+export const createWarehouse = (
+    companyId: string,
+    warehouseRequest: BodyType<WarehouseRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/warehouses`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: warehouseRequest
+    },
+      options);
+    }
+
+export const updateWarehouse = (
+    companyId: string,
+    warehouseId: string,
+    warehouseRequest: BodyType<WarehouseRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/warehouses/${warehouseId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: warehouseRequest
+    },
+      options);
+    }
+
+export const listStockDocuments = (
+    companyId: string,
+    params?: ListStockDocumentsParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfStockDocumentSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfStockDocumentSummaryResponse>(
+      {url: `/api/companies/${companyId}/stock-documents`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+/**
+ * Saves a draft. Stock moves only when it is confirmed.
+ */
+export const createStockDocument = (
+    companyId: string,
+    stockDocumentRequest: BodyType<StockDocumentRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/stock-documents`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: stockDocumentRequest
+    },
+      options);
+    }
+
+export const getStockDocument = (
+    companyId: string,
+    documentId: string,
+ options?: SecondParameter<typeof apiRequest<StockDocumentResponse>>,) => {
+      return apiRequest<StockDocumentResponse>(
+      {url: `/api/companies/${companyId}/stock-documents/${documentId}`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * Replaces a draft's content. A confirmed document cannot be changed (409 StockDocument.NotDraft).
+ */
+export const updateStockDocument = (
+    companyId: string,
+    documentId: string,
+    stockDocumentRequest: BodyType<StockDocumentRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/stock-documents/${documentId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: stockDocumentRequest
+    },
+      options);
+    }
+
+/**
+ * Deletes a draft. A confirmed document is reversed with a storno instead.
+ */
+export const deleteStockDocument = (
+    companyId: string,
+    documentId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/stock-documents/${documentId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Moves the stock and numbers the document; it is immutable afterwards. 409 Stock.Insufficient (with shortages) if it would take more than is in stock; nothing is saved then. 422 NumberSeries.NotConfigured if no number series covers its type and date.
+ */
+export const confirmStockDocument = (
+    companyId: string,
+    documentId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/stock-documents/${documentId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Reverses a confirmed document with a new, confirmed storno dated today; returns the storno's id. 409 Stock.Insufficient if the goods are no longer in stock.
+ */
+export const stornoStockDocument = (
+    companyId: string,
+    documentId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/stock-documents/${documentId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Current stock per article and warehouse, with weighted-average cost, value (KM) and LOTs.
+ */
+export const listStockBalances = (
+    companyId: string,
+    params?: ListStockBalancesParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfStockBalanceResponse>>,) => {
+      return apiRequest<PagedResponseOfStockBalanceResponse>(
+      {url: `/api/companies/${companyId}/stock`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const listSerialNumbers = (
+    companyId: string,
+    params?: ListSerialNumbersParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfSerialNumberResponse>>,) => {
+      return apiRequest<PagedResponseOfSerialNumberResponse>(
+      {url: `/api/companies/${companyId}/stock/serial-numbers`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const listWarehouseNumberSeries = (
+    companyId: string,
+ options?: SecondParameter<typeof apiRequest<NumberSeriesResponse[]>>,) => {
+      return apiRequest<NumberSeriesResponse[]>(
+      {url: `/api/companies/${companyId}/warehouse-number-series`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * Series are not edited: a new format starts with a new series from a later date.
+ */
+export const createWarehouseNumberSeries = (
+    companyId: string,
+    numberSeriesRequest: BodyType<NumberSeriesRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/warehouse-number-series`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: numberSeriesRequest
     },
       options);
     }
@@ -350,3 +540,17 @@ export type UpdateUnitOfMeasureResult = NonNullable<Awaited<ReturnType<typeof up
 export type ListArticlesResult = NonNullable<Awaited<ReturnType<typeof listArticles>>>
 export type CreateArticleResult = NonNullable<Awaited<ReturnType<typeof createArticle>>>
 export type UpdateArticleResult = NonNullable<Awaited<ReturnType<typeof updateArticle>>>
+export type ListWarehousesResult = NonNullable<Awaited<ReturnType<typeof listWarehouses>>>
+export type CreateWarehouseResult = NonNullable<Awaited<ReturnType<typeof createWarehouse>>>
+export type UpdateWarehouseResult = NonNullable<Awaited<ReturnType<typeof updateWarehouse>>>
+export type ListStockDocumentsResult = NonNullable<Awaited<ReturnType<typeof listStockDocuments>>>
+export type CreateStockDocumentResult = NonNullable<Awaited<ReturnType<typeof createStockDocument>>>
+export type GetStockDocumentResult = NonNullable<Awaited<ReturnType<typeof getStockDocument>>>
+export type UpdateStockDocumentResult = NonNullable<Awaited<ReturnType<typeof updateStockDocument>>>
+export type DeleteStockDocumentResult = NonNullable<Awaited<ReturnType<typeof deleteStockDocument>>>
+export type ConfirmStockDocumentResult = NonNullable<Awaited<ReturnType<typeof confirmStockDocument>>>
+export type StornoStockDocumentResult = NonNullable<Awaited<ReturnType<typeof stornoStockDocument>>>
+export type ListStockBalancesResult = NonNullable<Awaited<ReturnType<typeof listStockBalances>>>
+export type ListSerialNumbersResult = NonNullable<Awaited<ReturnType<typeof listSerialNumbers>>>
+export type ListWarehouseNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof listWarehouseNumberSeries>>>
+export type CreateWarehouseNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof createWarehouseNumberSeries>>>

@@ -7,12 +7,12 @@ internal enum SeedSize
 }
 
 /// <summary>How much mock data one company gets.</summary>
-internal sealed record SeedProfile(int BusinessPartners, int Articles)
+internal sealed record SeedProfile(int BusinessPartners, int Articles, int Warehouses)
 {
     public static SeedProfile For(SeedSize size) => size switch
     {
-        SeedSize.Small => new SeedProfile(BusinessPartners: 25, Articles: 40),
-        SeedSize.Full => new SeedProfile(BusinessPartners: 500, Articles: 2000),
+        SeedSize.Small => new SeedProfile(BusinessPartners: 25, Articles: 40, Warehouses: 2),
+        SeedSize.Full => new SeedProfile(BusinessPartners: 500, Articles: 2000, Warehouses: 4),
         _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
     };
 }

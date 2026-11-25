@@ -6,7 +6,6 @@ then remove the row and record the outcome in code/docs.
 
 | Item | Trigger | Current state | Likely when |
 |---|---|---|---|
-| Business date ("today" in Europe/Sarajevo) | First document with a document date (invoice, receipt) | `IClock` exposes only `UtcNow`; never use `DateTime.Today` | Phase 1 |
 | Currency list in code vs. configuration table | Companies need to enable or configure their own currencies | ISO currencies hardcoded in `Currency` (BAM, EUR, USD, CHF, GBP, RSD) | Phase 3 or never |
 | How the operator issues registration keys | Onboarding more than a handful of companies, or the grand administrator (below) | Operator runs `dotnet Erp.Api.dll issue-registration-key [--days N]` on the server; the key is printed once and passed to the company by hand | Before first real customers |
 | Grand administrator (operator overview of all companies) | Operator needs to see or support companies, or issue keys from a UI | None. No account can see across companies; there is no list of all companies (`GET /api/companies` was removed) | After MVP |
@@ -18,13 +17,40 @@ then remove the row and record the outcome in code/docs.
 | Code signing of desktop installers | First installer given to a customer | `client-desktop.yml` uploads unsigned installers as workflow artifacts (Windows NSIS, macOS DMG x64/arm64, Linux AppImage); SmartScreen and Gatekeeper warn, and macOS may refuse to open the app without notarization. Needs a Windows code-signing certificate and an Apple Developer ID (secrets in the repo), and a decision on publishing tags as GitHub Releases and on auto-update | Before first real customers |
 | Auth rate limit counts refreshes | An office with several users behind one public IP, or users with many tabs | `identity-auth` (10 requests/min per IP) covers login, refresh and registration. Each tab start or reload is one refresh, so a busy office can hit 429; the client then treats the session as lost and shows the login page. Options: separate (higher) limit for refresh, per-user partition for refresh | Before first real customers |
 | Logout in other tabs | Users report staying signed in in another tab | Logout revokes the refresh token, but other open tabs keep their in-memory access token until it expires (≤ 15 min) or they refresh. Could broadcast logout (BroadcastChannel) | When it matters |
-| Permission codes in the client | A module adds or renames permissions | `client/src/router/permissions.ts` repeats the codes from `CorePermissions` / `IdentityPermissions`, because the OpenAPI document does not carry them. Could expose them as an enum schema in the OpenAPI document so orval generates them | Next module with permissions |
-| Client test runner | First client logic worth unit testing beyond lint/type check (e.g. the auth interceptor) | None: the client has lint and type check only; the shell was verified by hand in Chrome and Electron. Likely Vitest (Quasar's `@quasar/testing-unit-vitest`) | Next client feature |
+| Permission codes in the client | A module adds or renames permissions | `client/src/router/permissions.ts` repeats the codes from `CorePermissions`, `IdentityPermissions` and `WarehousePermissions` (added with the Warehouse module), because the OpenAPI document does not carry them. Could expose them as an enum schema in the OpenAPI document so orval generates them | Next module with permissions |
 | Client IP behind a reverse proxy | First deployment behind a proxy or load balancer | Login rate limiting partitions by `RemoteIpAddress`; behind a proxy all clients share one partition until forwarded headers are configured | First deployment |
 | Outbox with more than one API instance | Running two or more API instances | `OutboxProcessor` assumes one instance; two would both deliver a message (handlers are idempotent, but work doubles). Needs row locking (`FOR UPDATE SKIP LOCKED`) or a single dispatcher | Scaling out |
+| Warehouse command contract for Purchasing and Sales | Purchasing (goods receipt from a purchase order) or Sales (delivery note) is built | Approach decided (see Resolved: synchronous commands through Contracts). Not built yet: `IStockDocumentCommands` in `Erp.Modules.Warehouse.Contracts` (`ReceiveAsync` / `IssueAsync` returning `Result`, keyed by source module + source document id), and whether the caller's and Warehouse's DbContexts share one connection and transaction or rely on the idempotency key and a retry | Phase 2b |
+| Receipts in foreign currency | Purchasing records supplier invoices in EUR etc. | Unit costs on receipts are KM only; Purchasing would convert at its exchange rate (configuration, effective-dated) before calling Warehouse | Phase 2b |
+| Back-dated stock documents and cost | Users confirm documents dated in the past, or Finance needs period-exact costs | The weighted average follows the order of confirmation, not the document date; a back-dated receipt does not revalue issues confirmed earlier. Options: forbid dates before the last confirmed movement, or recalculate | Phase 3 |
+| Storno price differences | Finance posts stock documents | A storno of a receipt takes the goods out at their original value as far as the stock value allows; any rest (stock would be left negative or with value but no quantity) is reported as `PriceDifference` on the event line. Finance decides the account (price differences / COGS) | Phase 3 |
+| Reserved stock | Sales orders should hold stock before delivery | Not implemented: available = on hand; nothing is reserved | Phase 2b |
+| LOT expiry rules | Expired goods must not be issued, or issues should pick the earliest expiry (FEFO) | LOTs carry an optional expiry date set by their first receipt; issues name the LOT and nothing checks expiry | When needed |
+| Stock counts (FR-WH-05) | FR-WH-05 is scheduled | Not implemented; a count would post its differences as receipts and issues | Later phase |
+| Warehouse data for articles created before the module | A database that existed before Warehouse is upgraded instead of reseeded | Warehouse learns about articles only from Core's `ArticleCreated`/`ArticleUpdated` events; older articles are unknown to it until they are edited. Dev databases are reseeded with `--reset`; a real upgrade would need Core to republish its articles | First real upgrade |
 
 ## Resolved
 
+- **Synchronous commands between modules** (approved after the Warehouse module): a module may expose queries and commands as
+  interfaces in its .Contracts project when the caller needs the answer at once, e.g. a stock issue that must be able to fail
+  with `Stock.Insufficient` before Sales confirms its delivery note. Commands are idempotent (key: source module + source
+  document id); everything else stays event-based. Events only were rejected: an issue could fail after the user was told the
+  delivery note is confirmed, which needs a compensating saga. Modules still reference only other modules' .Contracts projects,
+  checked in compiled assemblies (`ModuleBoundaryTests`) and in project files (`ProjectReferenceTests`).
+- **Business date** (Warehouse module): `IClock.Today` is the date in the business time zone. The host builds
+  `SystemClock` with `BiHLocale.TimeZone` (Europe/Sarajevo, in Erp.Localization.BiH). Stock documents may not be dated
+  after it; a storno is dated with it.
+- **Client test runner** (Warehouse client pages): Vitest (`npm run test`, `client/vitest.config.ts`), for client
+  logic that needs no browser (stock document form rules, the auth interceptor); run in `client-web.yml`. Pages are still
+  checked by lint and type check only.
+- **Article tracking type** (Warehouse module): none / LOT / serial, set in Core when the article is created and fixed
+  afterwards (Core cannot see stock); a service is never tracked. Warehouse keeps its own copy of articles from Core's events.
+- **Stock document numbering** (Warehouse module): a number is assigned on confirmation, gapless, counted per company,
+  document type and year of the document date; prefix and padding come from the effective-dated `warehouse.number_series`
+  table (no defaults in code). Confirming without a series fails with `NumberSeries.NotConfigured`.
+- **Concurrent stock movements** (Warehouse module, FR-WH-03): confirm, storno and draft edits lock the document, then
+  the stock items, serial numbers and number counter they touch (`SELECT … FOR UPDATE`, fixed order), in one transaction;
+  check constraints keep quantities and values non-negative as a last line of defence.
 - **Error kinds** (Core module; extended by Identity): `Error.Type` is `Failure | Validation | NotFound | Conflict | Unauthorized`,
   mapped to HTTP 422 / 400 / 404 / 409 / 401. `ValidationError` carries error codes per property; clients turn codes into UI text.
 - **EF Core construction** (Core module): `Entity` / `AggregateRoot` have a protected parameterless

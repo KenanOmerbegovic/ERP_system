@@ -5,12 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ArticleKind } from './articleKind';
+import type { ArticleTracking } from './articleTracking';
 
 export interface ArticleResponse {
   id: string;
   code: string;
   name: string;
   type: ArticleKind;
+  tracking: ArticleTracking;
   unitOfMeasureId: string;
   isActive: boolean;
 }

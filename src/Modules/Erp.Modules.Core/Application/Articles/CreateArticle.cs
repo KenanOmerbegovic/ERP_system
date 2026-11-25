@@ -3,6 +3,7 @@ using Erp.Modules.Core.Application.Common;
 using Erp.Modules.Core.Domain.Articles;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Results;
+using Erp.SharedKernel.Time;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ public sealed record CreateArticle(
     string Code,
     string Name,
     ArticleType Type,
+    TrackingType TrackingType,
     Guid UnitOfMeasureId,
     bool IsActive) : IArticleFields;
 
@@ -21,10 +23,16 @@ internal sealed class CreateArticleValidator : AbstractValidator<CreateArticle>
     public CreateArticleValidator()
     {
         Include(new ArticleFieldsValidator());
+        RuleFor(x => x.TrackingType).IsInEnum();
+        RuleFor(x => x.TrackingType)
+            .Equal(TrackingType.None)
+            .When(x => x.Type == ArticleType.Service)
+            .WithErrorCode(CoreErrors.ServiceCannotBeTracked.Code)
+            .WithMessage(CoreErrors.ServiceCannotBeTracked.Message);
     }
 }
 
-public sealed class CreateArticleHandler(ICoreDbContext db, IValidator<CreateArticle> validator)
+public sealed class CreateArticleHandler(ICoreDbContext db, IValidator<CreateArticle> validator, IClock clock)
 {
     public async Task<Result<Guid>> HandleAsync(CreateArticle command, CancellationToken cancellationToken)
     {
@@ -52,8 +60,10 @@ public sealed class CreateArticleHandler(ICoreDbContext db, IValidator<CreateArt
             return CoreErrors.DuplicateArticleCode;
         }
 
-        var article = Article.Create(command.CompanyId, code, command.Name, command.Type, command.UnitOfMeasureId, command.IsActive);
+        var article = Article.Create(
+            command.CompanyId, code, command.Name, command.Type, command.TrackingType, command.UnitOfMeasureId, command.IsActive);
         db.Articles.Add(article);
+        db.AddIntegrationEvent(article.ToCreatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);
         return article.Id;
     }

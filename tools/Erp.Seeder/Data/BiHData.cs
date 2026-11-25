@@ -1,9 +1,11 @@
+using Erp.Modules.Core.Domain.Articles;
+
 namespace Erp.Seeder.Data;
 
 internal sealed record City(string Name, string PostalCode);
 
-/// <summary>A kind of goods sold in several variants, e.g. sizes; each variant is sold under several brands.</summary>
-internal sealed record GoodsLine(string Name, string UnitCode, string[] Variants);
+/// <summary>A kind of goods sold in several variants, e.g. sizes; each variant is sold under several brands. Food is LOT tracked, power tools by serial number.</summary>
+internal sealed record GoodsLine(string Name, string UnitCode, string[] Variants, TrackingType Tracking = TrackingType.None);
 
 internal sealed record ServiceLine(string Name, string UnitCode);
 
@@ -97,11 +99,11 @@ internal static class BiHData
     [
         new("Vijak", "kom", ["M6x40", "M8x60", "M10x80"]),
         new("Matica", "kom", ["M6", "M8", "M10"]),
-        new("Kafa mljevena", "kom", ["100 g", "200 g", "500 g"]),
-        new("Brašno T-500", "kom", ["1 kg", "5 kg", "25 kg"]),
-        new("Šećer kristal", "kom", ["1 kg", "5 kg"]),
-        new("Ulje suncokretovo", "kom", ["1 l", "5 l"]),
-        new("Mineralna voda", "kom", ["0,5 l", "1,5 l"]),
+        new("Kafa mljevena", "kom", ["100 g", "200 g", "500 g"], TrackingType.Lot),
+        new("Brašno T-500", "kom", ["1 kg", "5 kg", "25 kg"], TrackingType.Lot),
+        new("Šećer kristal", "kom", ["1 kg", "5 kg"], TrackingType.Lot),
+        new("Ulje suncokretovo", "kom", ["1 l", "5 l"], TrackingType.Lot),
+        new("Mineralna voda", "kom", ["0,5 l", "1,5 l"], TrackingType.Lot),
         new("Kabl PP-Y", "m", ["3x1,5", "3x2,5", "5x2,5"]),
         new("Cijev PVC", "m", ["Ø50", "Ø75", "Ø110"]),
         new("Cement", "kg", ["CEM II 42,5 R", "CEM I 52,5 N"]),
@@ -119,12 +121,12 @@ internal static class BiHData
         new("Ljepilo za pločice", "kg", ["C1", "C2TE"]),
         new("Silikon", "kom", ["bijeli", "providni"]),
         new("Deterdžent za veš", "kom", ["3 kg", "6 kg"]),
-        new("Sok od jabuke", "kom", ["0,2 l", "1 l"]),
-        new("Tjestenina", "kom", ["špageti", "penne", "fusilli"]),
-        new("Mlijeko trajno", "l", ["2,8 %", "0,9 %"]),
-        new("Čokolada", "kom", ["mliječna", "tamna", "s lješnjacima"]),
+        new("Sok od jabuke", "kom", ["0,2 l", "1 l"], TrackingType.Lot),
+        new("Tjestenina", "kom", ["špageti", "penne", "fusilli"], TrackingType.Lot),
+        new("Mlijeko trajno", "l", ["2,8 %", "0,9 %"], TrackingType.Lot),
+        new("Čokolada", "kom", ["mliječna", "tamna", "s lješnjacima"], TrackingType.Lot),
         new("Odvijač", "kom", ["PH1", "PH2", "ravni 5 mm"]),
-        new("Bušilica", "kom", ["akumulatorska 18 V", "udarna 800 W"]),
+        new("Bušilica", "kom", ["akumulatorska 18 V", "udarna 800 W"], TrackingType.Serial),
         new("Brusna ploča", "kom", ["115 mm", "125 mm", "230 mm"]),
         new("Stiropor ploča", "m2", ["5 cm", "8 cm", "10 cm"]),
         new("Armaturna mreža", "kom", ["Q131", "Q188"]),

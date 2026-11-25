@@ -3,6 +3,8 @@ using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Infrastructure;
 using Erp.Modules.Identity;
 using Erp.Modules.Identity.Infrastructure;
+using Erp.Modules.Warehouse;
+using Erp.Modules.Warehouse.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -19,7 +21,8 @@ internal static class DevelopmentDatabase
 
     private const string DropSchemas =
         "DROP SCHEMA IF EXISTS " + CoreDbContext.Schema + " CASCADE; " +
-        "DROP SCHEMA IF EXISTS " + IdentityDbContext.Schema + " CASCADE;";
+        "DROP SCHEMA IF EXISTS " + IdentityDbContext.Schema + " CASCADE; " +
+        "DROP SCHEMA IF EXISTS " + WarehouseDbContext.Schema + " CASCADE;";
 
     public static async Task PrepareAsync(IServiceProvider services, string companyTaxId, bool reset, CancellationToken cancellationToken)
     {
@@ -44,6 +47,7 @@ internal static class DevelopmentDatabase
 
         await services.MigrateCoreDatabaseAsync(cancellationToken);
         await services.MigrateIdentityDatabaseAsync(cancellationToken);
+        await services.MigrateWarehouseDatabaseAsync(cancellationToken);
 
         await using (var scope = services.CreateAsyncScope())
         {

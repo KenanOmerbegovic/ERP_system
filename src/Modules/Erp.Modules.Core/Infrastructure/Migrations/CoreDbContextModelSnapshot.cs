@@ -94,6 +94,12 @@ namespace Erp.Modules.Core.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("TrackingType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tracking_type");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)

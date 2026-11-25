@@ -54,6 +54,7 @@ internal static class SeedChecks
             problems.Add($"{data.Administrator.Email} should be the company's administrator.");
         }
 
+        await StockChecks.RunAsync(provider, data, seeded, problems, cancellationToken);
         return problems;
     }
 

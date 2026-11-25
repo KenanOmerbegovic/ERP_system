@@ -3,6 +3,7 @@ using Erp.Modules.Core.Application.Common;
 using Erp.Modules.Core.Domain.Articles;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Results;
+using Erp.SharedKernel.Time;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +26,7 @@ internal sealed class UpdateArticleValidator : AbstractValidator<UpdateArticle>
     }
 }
 
-public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArticle> validator)
+public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArticle> validator, IClock clock)
 {
     public async Task<Result> HandleAsync(UpdateArticle command, CancellationToken cancellationToken)
     {
@@ -41,6 +42,11 @@ public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArt
         if (article is null)
         {
             return CoreErrors.ArticleNotFound;
+        }
+
+        if (command.Type == ArticleType.Service && article.TrackingType != TrackingType.None)
+        {
+            return CoreErrors.ServiceCannotBeTracked;
         }
 
         if (!await db.UnitsOfMeasure.AnyAsync(
@@ -59,6 +65,7 @@ public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArt
         }
 
         article.Update(code, command.Name, command.Type, command.UnitOfMeasureId, command.IsActive);
+        db.AddIntegrationEvent(article.ToUpdatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
