@@ -36,7 +36,7 @@ internal static class ArticleEndpoints
 
         group.MapPost("/", async (
             Guid companyId,
-            ArticleRequest request,
+            CreateArticleRequest request,
             CreateArticleHandler handler,
             CancellationToken cancellationToken) =>
             HttpResults.Created(await handler.HandleAsync(
@@ -45,10 +45,12 @@ internal static class ArticleEndpoints
                     request.Code,
                     request.Name,
                     ToType(request.Type),
+                    ToTracking(request.Tracking),
                     request.UnitOfMeasureId,
                     request.IsActive),
                 cancellationToken)))
             .WithName("CreateArticle")
+            .WithDescription("The tracking type (none, LOT, serial) is fixed once the article exists.")
             .RequireAuthorization(PermissionPolicy.For(CorePermissions.ArticlesWrite))
             .Produces<CreatedResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
@@ -57,7 +59,7 @@ internal static class ArticleEndpoints
         group.MapPut("/{articleId:guid}", async (
             Guid companyId,
             Guid articleId,
-            ArticleRequest request,
+            UpdateArticleRequest request,
             UpdateArticleHandler handler,
             CancellationToken cancellationToken) =>
             HttpResults.NoContent(await handler.HandleAsync(
@@ -84,5 +86,13 @@ internal static class ArticleEndpoints
         ArticleKind.Goods => ArticleType.Goods,
         ArticleKind.Service => ArticleType.Service,
         _ => (ArticleType)(int)kind,
+    };
+
+    private static TrackingType ToTracking(ArticleTracking tracking) => tracking switch
+    {
+        ArticleTracking.None => TrackingType.None,
+        ArticleTracking.Lot => TrackingType.Lot,
+        ArticleTracking.Serial => TrackingType.Serial,
+        _ => (TrackingType)(int)tracking,
     };
 }

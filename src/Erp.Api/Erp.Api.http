@@ -130,10 +130,60 @@ Content-Type: application/json
   "code": "A001",
   "name": "Vijak M8",
   "type": "Goods",
+  "tracking": "None",
   "unitOfMeasureId": "{{unitId}}",
   "isActive": true
 }
 
 ### List articles
 GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/articles?page=1&pageSize=50
+Authorization: Bearer {{accessToken}}
+
+### Create warehouse
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/warehouses
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "code": "MP01",
+  "name": "Centralno skladište",
+  "isActive": true
+}
+
+### Create number series (one per document type; no document can be confirmed without one)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/warehouse-number-series
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "documentType": "Receipt",
+  "validFrom": "2026-01-01",
+  "prefix": "PRM-",
+  "padding": 5
+}
+
+### Create a goods receipt (draft; stock moves on confirm)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/stock-documents
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "type": "Receipt",
+  "documentDate": "2026-11-25",
+  "targetWarehouseId": "{{warehouseId}}",
+  "lines": [
+    { "articleId": "{{articleId}}", "quantity": 10, "unitCost": 2.50 }
+  ]
+}
+
+### Confirm the document (409 Stock.Insufficient with shortages for an issue beyond stock)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/stock-documents/{{documentId}}/confirm
+Authorization: Bearer {{accessToken}}
+
+### Reverse a confirmed document (storno)
+POST {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/stock-documents/{{documentId}}/storno
+Authorization: Bearer {{accessToken}}
+
+### Stock levels per article and warehouse
+GET {{Erp.Api_HostAddress}}/api/companies/{{companyId}}/stock?page=1&pageSize=50
 Authorization: Bearer {{accessToken}}

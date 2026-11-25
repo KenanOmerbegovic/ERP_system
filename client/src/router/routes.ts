@@ -1,7 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { navigation } from './navigation';
-import { CorePermissions } from './permissions';
+import { CorePermissions, WarehousePermissions } from './permissions';
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -16,10 +16,19 @@ declare module 'vue-router' {
 
 const placeholderPage = () => import('@/pages/PlaceholderPage.vue');
 
+/** Navigation items that have a page; every other item leads to the placeholder. */
+const built = new Set([
+  'partners',
+  'warehouses',
+  'stock-documents',
+  'stock-levels',
+  'warehouse-number-series',
+]);
+
 /** Navigation items without a page yet. */
 const placeholders: RouteRecordRaw[] = navigation
   .flatMap((module) => module.items)
-  .filter((item) => item.route !== 'partners')
+  .filter((item) => !built.has(item.route))
   .map((item) => ({
     path: item.route,
     name: item.route,
@@ -60,6 +69,38 @@ const routes: RouteRecordRaw[] = [
         name: 'partners',
         component: () => import('@/pages/partners/PartnersPage.vue'),
         meta: { permission: CorePermissions.businessPartnersRead },
+      },
+      {
+        path: 'warehouses',
+        name: 'warehouses',
+        component: () => import('@/pages/warehouse/WarehousesPage.vue'),
+        meta: { permission: WarehousePermissions.warehousesRead },
+      },
+      {
+        path: 'stock-documents',
+        name: 'stock-documents',
+        component: () => import('@/pages/warehouse/StockDocumentsPage.vue'),
+        meta: { permission: WarehousePermissions.stockDocumentsRead },
+      },
+      {
+        // id "new" opens an empty draft.
+        path: 'stock-documents/:id',
+        name: 'stock-document',
+        component: () => import('@/pages/warehouse/StockDocumentPage.vue'),
+        props: true,
+        meta: { permission: WarehousePermissions.stockDocumentsRead },
+      },
+      {
+        path: 'stock-levels',
+        name: 'stock-levels',
+        component: () => import('@/pages/warehouse/StockLevelsPage.vue'),
+        meta: { permission: WarehousePermissions.stockRead },
+      },
+      {
+        path: 'warehouse-number-series',
+        name: 'warehouse-number-series',
+        component: () => import('@/pages/warehouse/NumberSeriesPage.vue'),
+        meta: { permission: WarehousePermissions.stockDocumentsRead },
       },
       ...placeholders,
       ...placeholderModules,

@@ -177,6 +177,8 @@ public sealed class OutboxProcessorTests : IDisposable
     private sealed class FixedClock(DateTimeOffset now) : IClock
     {
         public DateTimeOffset UtcNow => now;
+
+        public DateOnly Today => DateOnly.FromDateTime(now.UtcDateTime);
     }
 
     private sealed class Received

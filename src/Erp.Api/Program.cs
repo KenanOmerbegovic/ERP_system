@@ -2,11 +2,14 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Erp.Api.OpenApi;
+using Erp.Localization.BiH;
 using Erp.Localization.BiH.Core;
 using Erp.Modules.Core;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
+using Erp.Modules.Warehouse;
+using Erp.Modules.Warehouse.Contracts;
 using Erp.SharedKernel.Time;
 using Microsoft.Extensions.Options;
 
@@ -41,10 +44,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
     .AllowAnyMethod()
     .AllowCredentials()));
 
-builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<IClock>(new SystemClock(BiHLocale.TimeZone));
 builder.Services.AddSingleton<ITaxIdentifierRules, BiHTaxIdentifierRules>();
-builder.Services.AddIdentityModule(builder.Configuration, CorePermissions.All);
+builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All]);
 builder.Services.AddCoreModule(builder.Configuration);
+builder.Services.AddWarehouseModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -55,6 +59,7 @@ if (app.Environment.IsDevelopment())
 {
     await app.Services.MigrateCoreDatabaseAsync(app.Lifetime.ApplicationStopping);
     await app.Services.MigrateIdentityDatabaseAsync(app.Lifetime.ApplicationStopping);
+    await app.Services.MigrateWarehouseDatabaseAsync(app.Lifetime.ApplicationStopping);
 }
 
 if (await app.Services.TryRunCommandAsync(args, Console.Out, app.Lifetime.ApplicationStopping))
@@ -83,6 +88,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapIdentityEndpoints();
 app.MapCoreEndpoints();
+app.MapWarehouseEndpoints();
 
 await app.RunAsync();
 

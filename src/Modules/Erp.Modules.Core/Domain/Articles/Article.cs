@@ -5,9 +5,15 @@ namespace Erp.Modules.Core.Domain.Articles;
 /// <summary>Goods or a service a company buys or sells. Tax is linked later, from Finance configuration.</summary>
 public sealed class Article : AggregateRoot<Guid>
 {
-    private Article(Guid id, CompanyId companyId, string code, string name, ArticleType type, Guid unitOfMeasureId, bool isActive)
+    private Article(Guid id, CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, bool isActive)
         : base(id, companyId)
     {
+        if (!Enum.IsDefined(trackingType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(trackingType), trackingType, "Unknown tracking type.");
+        }
+
+        TrackingType = trackingType;
         Update(code, name, type, unitOfMeasureId, isActive);
     }
 
@@ -22,13 +28,17 @@ public sealed class Article : AggregateRoot<Guid>
 
     public ArticleType Type { get; private set; }
 
+    /// <summary>How stock of the article is identified. Fixed at creation: stock already held would lose or lack its LOT or serial numbers.</summary>
+    public TrackingType TrackingType { get; private set; }
+
     /// <summary>A unit of measure of the same company.</summary>
     public Guid UnitOfMeasureId { get; private set; }
 
     public bool IsActive { get; private set; }
 
-    public static Article Create(CompanyId companyId, string code, string name, ArticleType type, Guid unitOfMeasureId, bool isActive) =>
-        new(Guid.CreateVersion7(), companyId, code, name, type, unitOfMeasureId, isActive);
+    public static Article Create(
+        CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, bool isActive) =>
+        new(Guid.CreateVersion7(), companyId, code, name, type, trackingType, unitOfMeasureId, isActive);
 
     public void Update(string code, string name, ArticleType type, Guid unitOfMeasureId, bool isActive)
     {
@@ -40,6 +50,11 @@ public sealed class Article : AggregateRoot<Guid>
         if (unitOfMeasureId == Guid.Empty)
         {
             throw new ArgumentException("Article needs a unit of measure.", nameof(unitOfMeasureId));
+        }
+
+        if (type == ArticleType.Service && TrackingType != TrackingType.None)
+        {
+            throw new ArgumentException("A service has no stock, so it cannot be LOT or serial tracked.", nameof(type));
         }
 
         Code = Text.Required(code);
@@ -54,4 +69,11 @@ public enum ArticleType
 {
     Goods,
     Service,
+}
+
+public enum TrackingType
+{
+    None,
+    Lot,
+    Serial,
 }

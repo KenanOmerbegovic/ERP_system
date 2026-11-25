@@ -31,4 +31,8 @@ public static class CoreErrors
     /// <summary>The unit referenced in the request body does not exist in the company.</summary>
     public static readonly Error ArticleUnitOfMeasureNotFound =
         Error.Validation("Article.UnitOfMeasureNotFound", "The unit of measure does not exist in this company.");
+
+    /// <summary>The article is LOT or serial tracked, so it cannot become a service.</summary>
+    public static readonly Error ServiceCannotBeTracked =
+        Error.Validation("Article.ServiceCannotBeTracked", "A LOT or serial tracked article cannot become a service.");
 }

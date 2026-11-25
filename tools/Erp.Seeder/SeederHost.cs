@@ -1,9 +1,12 @@
 using System.Security.Cryptography;
+using Erp.Localization.BiH;
 using Erp.Localization.BiH.Core;
 using Erp.Modules.Core;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
+using Erp.Modules.Warehouse;
+using Erp.Modules.Warehouse.Contracts;
 using Erp.SharedKernel.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +14,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Erp.Seeder;
 
-/// <summary>The modules composed as in Erp.Api, without HTTP. Core's outbox processor runs while the host is started.</summary>
+/// <summary>The modules composed as in Erp.Api, without HTTP. The outbox processors run while the host is started.</summary>
 internal static class SeederHost
 {
     /// <param name="settings">Added last, e.g. a test database's connection string.</param>
@@ -30,10 +33,11 @@ internal static class SeederHost
             builder.Configuration.AddInMemoryCollection(settings);
         }
 
-        builder.Services.AddSingleton<IClock, SystemClock>();
+        builder.Services.AddSingleton<IClock>(new SystemClock(BiHLocale.TimeZone));
         builder.Services.AddSingleton<ITaxIdentifierRules, BiHTaxIdentifierRules>();
-        builder.Services.AddIdentityModule(builder.Configuration, CorePermissions.All);
+        builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All]);
         builder.Services.AddCoreModule(builder.Configuration);
+        builder.Services.AddWarehouseModule(builder.Configuration);
         return builder.Build();
     }
 }

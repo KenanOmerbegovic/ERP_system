@@ -1,4 +1,4 @@
-import { CorePermissions, IdentityPermissions } from './permissions';
+import { CorePermissions, IdentityPermissions, WarehousePermissions } from './permissions';
 
 /** A message key under `modules` in src/i18n. */
 type ModuleKey = 'core' | 'sales' | 'purchasing' | 'inventory' | 'accounting' | 'administration';
@@ -20,8 +20,8 @@ export interface NavigationModule {
 }
 
 /**
- * The module navigation. Only Core has working pages so far; its other items and the
- * administration pages lead to a placeholder page but are already permission-checked.
+ * The module navigation. Core's partners and the warehouse pages work; the other items lead to
+ * a placeholder page but are already permission-checked.
  */
 export const navigation: readonly NavigationModule[] = [
   {
@@ -50,7 +50,36 @@ export const navigation: readonly NavigationModule[] = [
   },
   { key: 'sales', icon: 'point_of_sale', items: [] },
   { key: 'purchasing', icon: 'local_shipping', items: [] },
-  { key: 'inventory', icon: 'warehouse', items: [] },
+  {
+    key: 'inventory',
+    icon: 'warehouse',
+    items: [
+      {
+        route: 'stock-levels',
+        labelKey: 'modules.inventory.stockLevels',
+        icon: 'inventory',
+        permission: WarehousePermissions.stockRead,
+      },
+      {
+        route: 'stock-documents',
+        labelKey: 'modules.inventory.stockDocuments',
+        icon: 'receipt_long',
+        permission: WarehousePermissions.stockDocumentsRead,
+      },
+      {
+        route: 'warehouses',
+        labelKey: 'modules.inventory.warehouses',
+        icon: 'store',
+        permission: WarehousePermissions.warehousesRead,
+      },
+      {
+        route: 'warehouse-number-series',
+        labelKey: 'modules.inventory.numberSeries',
+        icon: 'pin',
+        permission: WarehousePermissions.stockDocumentsRead,
+      },
+    ],
+  },
   { key: 'accounting', icon: 'account_balance', items: [] },
   {
     key: 'administration',

@@ -4,12 +4,9 @@
  * Erp.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { ArticleKind } from './articleKind';
 
-export interface ArticleRequest {
+export interface WarehouseRequest {
   code: string;
   name: string;
-  type: ArticleKind;
-  unitOfMeasureId: string;
   isActive: boolean;
 }

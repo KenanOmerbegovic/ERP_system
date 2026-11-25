@@ -33,9 +33,9 @@ internal sealed class CoreHandlers(CoreDbContext db)
 
     public ListUnitsOfMeasureHandler ListUnitsOfMeasure { get; } = new(db);
 
-    public CreateArticleHandler CreateArticle { get; } = new(db, new CreateArticleValidator());
+    public CreateArticleHandler CreateArticle => new(db, new CreateArticleValidator(), Clock);
 
-    public UpdateArticleHandler UpdateArticle { get; } = new(db, new UpdateArticleValidator());
+    public UpdateArticleHandler UpdateArticle => new(db, new UpdateArticleValidator(), Clock);
 
     public ListArticlesHandler ListArticles { get; } = new(db, new ListArticlesValidator());
 
@@ -62,7 +62,7 @@ internal sealed class CoreHandlers(CoreDbContext db)
     public async Task<Guid> AnArticleAsync(CompanyId companyId, Guid unitId, string code = "A001", string name = "Artikal")
     {
         var result = await CreateArticle.HandleAsync(
-            new CreateArticle(companyId, code, name, ArticleType.Goods, unitId, IsActive: true),
+            new CreateArticle(companyId, code, name, ArticleType.Goods, TrackingType.None, unitId, IsActive: true),
             CancellationToken.None);
         return result.Value;
     }
