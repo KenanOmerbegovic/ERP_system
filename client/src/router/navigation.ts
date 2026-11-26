@@ -2,6 +2,7 @@ import {
   CorePermissions,
   IdentityPermissions,
   PurchasingPermissions,
+  SalesPermissions,
   WarehousePermissions,
 } from './permissions';
 
@@ -25,7 +26,7 @@ export interface NavigationModule {
 }
 
 /**
- * The module navigation. Core's partners and VAT rates, and the warehouse and purchasing pages work; the other items lead to
+ * The module navigation. Core's partners and VAT rates, and the sales, purchasing and warehouse pages work; the other items lead to
  * a placeholder page but are already permission-checked.
  */
 export const navigation: readonly NavigationModule[] = [
@@ -59,7 +60,48 @@ export const navigation: readonly NavigationModule[] = [
       },
     ],
   },
-  { key: 'sales', icon: 'point_of_sale', items: [] },
+  {
+    key: 'sales',
+    icon: 'point_of_sale',
+    items: [
+      {
+        route: 'offers',
+        labelKey: 'modules.sales.offers',
+        icon: 'request_page',
+        permission: SalesPermissions.offersRead,
+      },
+      {
+        route: 'sales-orders',
+        labelKey: 'modules.sales.orders',
+        icon: 'shopping_cart',
+        permission: SalesPermissions.ordersRead,
+      },
+      {
+        route: 'delivery-notes',
+        labelKey: 'modules.sales.deliveries',
+        icon: 'local_shipping',
+        permission: SalesPermissions.deliveriesRead,
+      },
+      {
+        route: 'sales-invoices',
+        labelKey: 'modules.sales.invoices',
+        icon: 'receipt',
+        permission: SalesPermissions.invoicesRead,
+      },
+      {
+        route: 'credit-notes',
+        labelKey: 'modules.sales.creditNotes',
+        icon: 'assignment_return',
+        permission: SalesPermissions.creditNotesRead,
+      },
+      {
+        route: 'sales-number-series',
+        labelKey: 'modules.sales.numberSeries',
+        icon: 'pin',
+        permission: SalesPermissions.ordersRead,
+      },
+    ],
+  },
   {
     key: 'purchasing',
     icon: 'local_shipping',

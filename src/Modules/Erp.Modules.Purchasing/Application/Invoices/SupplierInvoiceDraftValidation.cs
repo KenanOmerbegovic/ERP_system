@@ -116,13 +116,18 @@ internal static class SupplierInvoiceRules
         var calculation = await calculator.CalculateAsync(request, cancellationToken);
         if (calculation.IsFailure)
         {
-            var errors = new ValidationErrors();
-            foreach (var line in invoice.Lines.Where(l => calculation.Error.Message.Contains($" {l.VatCode} ", StringComparison.Ordinal)))
+            if (calculation.Error is not VatRateNotFoundError notFound)
             {
-                errors.Add($"Lines[{line.LineNumber - 1}].VatCode", PurchasingValidationCodes.VatRateNotFound);
+                return calculation.Error;
             }
 
-            return errors.Any ? errors.ToError() : calculation.Error;
+            var errors = new ValidationErrors();
+            foreach (var key in notFound.LineKeys)
+            {
+                errors.Add($"Lines[{int.Parse(key, CultureInfo.InvariantCulture) - 1}].VatCode", PurchasingValidationCodes.VatRateNotFound);
+            }
+
+            return errors.ToError();
         }
 
         invoice.ApplyVat(

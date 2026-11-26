@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\src\Modules\Erp.Modules.Core\Erp.Modules.Core.csproj" />
     <ProjectReference Include="..\..\src\Modules\Erp.Modules.Identity\Erp.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\Erp.Modules.Purchasing\Erp.Modules.Purchasing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Sales\Erp.Modules.Sales.csproj" />
     <ProjectReference Include="..\..\src\Modules\Erp.Modules.Warehouse\Erp.Modules.Warehouse.csproj" />
   </ItemGroup>
 

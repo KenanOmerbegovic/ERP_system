@@ -30,14 +30,6 @@ internal sealed class StockDocumentCommands(
     {
         ArgumentNullException.ThrowIfNull(command);
         var hash = Hash(new { command.WarehouseId, command.DocumentDate, command.Note, command.Lines });
-
-        await using var transaction = await db.BeginTransactionAsync(cancellationToken);
-        var entry = await ClaimAsync(command.CompanyId, command.Key, CommandLogEntry.Receive, cancellationToken);
-        if (entry.IsCompleted)
-        {
-            return entry.PayloadHash == hash ? await ReferenceAsync(entry.DocumentId!.Value, cancellationToken) : StockCommandErrors.IdempotencyKeyReused;
-        }
-
         var draft = new CreateStockDocument(
             command.CompanyId,
             StockDocumentType.Receipt,
@@ -48,6 +40,36 @@ internal sealed class StockDocumentCommands(
             command.Lines
                 .Select(line => new StockLineInput(line.ArticleId, line.Quantity, line.UnitCost, line.LotNumber, line.LotExpiryDate, line.SerialNumbers))
                 .ToList());
+        return await CreateAndConfirmAsync(command.Key, CommandLogEntry.Receive, hash, draft, cancellationToken);
+    }
+
+    public async Task<Result<StockDocumentReference>> IssueAsync(StockIssueCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var hash = Hash(new { command.WarehouseId, command.DocumentDate, command.Note, command.Lines });
+        var draft = new CreateStockDocument(
+            command.CompanyId,
+            StockDocumentType.Issue,
+            command.DocumentDate,
+            command.WarehouseId,
+            null,
+            command.Note,
+            command.Lines
+                .Select(line => new StockLineInput(line.ArticleId, line.Quantity, null, line.LotNumber, null, line.SerialNumbers))
+                .ToList());
+        return await CreateAndConfirmAsync(command.Key, CommandLogEntry.Issue, hash, draft, cancellationToken);
+    }
+
+    private async Task<Result<StockDocumentReference>> CreateAndConfirmAsync(
+        IdempotencyKey key, string action, string hash, CreateStockDocument draft, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.BeginTransactionAsync(cancellationToken);
+        var entry = await ClaimAsync(draft.CompanyId, key, action, cancellationToken);
+        if (entry.IsCompleted)
+        {
+            return entry.PayloadHash == hash ? await ReferenceAsync(entry.DocumentId!.Value, cancellationToken) : StockCommandErrors.IdempotencyKeyReused;
+        }
+
         var validation = await validator.ValidateAsync(draft, cancellationToken);
         if (!validation.IsValid)
         {
@@ -60,8 +82,8 @@ internal sealed class StockDocumentCommands(
         }
 
         var document = StockDocument.CreateDraft(
-            draft.CompanyId, draft.Type, draft.DocumentDate, null, draft.TargetWarehouseId, draft.Note, draft.Lines, clock.UtcNow);
-        document.AssignSource(command.Key.SourceModule, command.Key.SourceDocumentId);
+            draft.CompanyId, draft.Type, draft.DocumentDate, draft.SourceWarehouseId, draft.TargetWarehouseId, draft.Note, draft.Lines, clock.UtcNow);
+        document.AssignSource(key.SourceModule, key.SourceDocumentId);
         db.StockDocuments.Add(document);
         return await ConfirmAndRecordAsync(document, entry, hash, transaction, cancellationToken);
     }
@@ -82,7 +104,7 @@ internal sealed class StockDocumentCommands(
             c => c.CompanyId == command.CompanyId
                 && c.SourceModule == command.OriginalKey.SourceModule
                 && c.SourceDocumentId == command.OriginalKey.SourceDocumentId
-                && c.Action == CommandLogEntry.Receive
+                && (c.Action == CommandLogEntry.Receive || c.Action == CommandLogEntry.Issue)
                 && c.DocumentId != null,
             cancellationToken);
         if (original is null || !await locks.LockDocumentAsync(command.CompanyId, original.DocumentId!.Value, cancellationToken))

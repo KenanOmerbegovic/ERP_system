@@ -9,6 +9,7 @@ namespace Erp.Modules.Warehouse.Domain.Commands;
 public sealed class CommandLogEntry : Entity<Guid>
 {
     public const string Receive = "receive";
+    public const string Issue = "issue";
     public const string Reverse = "reverse";
 
     private CommandLogEntry()
@@ -19,7 +20,7 @@ public sealed class CommandLogEntry : Entity<Guid>
 
     public Guid SourceDocumentId { get; private set; }
 
-    /// <summary><see cref="Receive"/> or <see cref="Reverse"/>.</summary>
+    /// <summary><see cref="Receive"/>, <see cref="Issue"/> or <see cref="Reverse"/>.</summary>
     public string Action { get; private set; } = null!;
 
     /// <summary>SHA-256 of the command without its key; a repeated key must send the same command.</summary>

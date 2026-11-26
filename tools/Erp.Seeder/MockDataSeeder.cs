@@ -9,6 +9,16 @@ using Erp.Modules.Purchasing.Application.Numbering;
 using Erp.Modules.Purchasing.Application.Orders;
 using Erp.Modules.Purchasing.Application.Receipts;
 using Erp.Modules.Purchasing.Domain.Receipts;
+using Erp.Modules.Sales.Application.Abstractions;
+using Erp.Modules.Sales.Application.Common;
+using Erp.Modules.Sales.Application.CreditNotes;
+using Erp.Modules.Sales.Application.Deliveries;
+using Erp.Modules.Sales.Application.Invoices;
+using Erp.Modules.Sales.Application.Numbering;
+using Erp.Modules.Sales.Application.Offers;
+using Erp.Modules.Sales.Application.Orders;
+using Erp.Modules.Sales.Domain.CreditNotes;
+using Erp.Modules.Sales.Domain.Deliveries;
 using Erp.Modules.Identity.Application.Auth;
 using Erp.Modules.Identity.Application.Registration;
 using Erp.Modules.Identity.Application.Roles;
@@ -34,15 +44,20 @@ internal sealed record SeededCompany(
     IReadOnlyDictionary<string, Guid> RoleIds,
     IReadOnlyDictionary<string, Guid> ArticleIds,
     IReadOnlyDictionary<string, Guid> WarehouseIds,
-    IReadOnlyList<SeededPurchaseOrder> PurchaseOrders);
+    IReadOnlyList<SeededPurchaseOrder> PurchaseOrders,
+    IReadOnlyList<SeededSalesOrder> SalesOrders);
 
 /// <summary>A seeded order with its receipt and invoice, when the scenario made them.</summary>
 internal sealed record SeededPurchaseOrder(PurchaseOrderSeed Seed, Guid OrderId, Guid? ReceiptId, Guid? InvoiceId);
 
+/// <summary>A seeded sales order with the documents its scenario made.</summary>
+internal sealed record SeededSalesOrder(SalesOrderSeed Seed, Guid OrderId, Guid? DeliveryNoteId, Guid? InvoiceId, Guid? CreditNoteId, Guid? InvoiceStornoId);
+
 /// <summary>
 /// Creates the mock data only through Application commands, in the order a real company would:
 /// registration key, administrator account, company, then roles, users, master data, warehouses and opening stock,
-/// and last a purchasing scenario (orders, receipts that move stock, supplier invoices).
+/// then a purchasing scenario (orders, receipts that move stock, supplier invoices) and last a sales scenario (offers,
+/// orders, deliveries that issue stock, invoices, credit notes and stornos).
 /// Each command runs in its own scope, like an HTTP request.
 /// </summary>
 internal sealed class MockDataSeeder(IServiceProvider services)
@@ -134,7 +149,8 @@ internal sealed class MockDataSeeder(IServiceProvider services)
 
         var warehouseIds = await SeedWarehouseAsync(data, companyId, articleIds, cancellationToken);
         var orders = await SeedPurchasingAsync(data, companyId, partnerIds, articleIds, warehouseIds[data.Warehouses[0].Code], cancellationToken);
-        return new SeededCompany(companyId, administratorId, roleIds, articleIds, warehouseIds, orders);
+        var sales = await SeedSalesAsync(data, companyId, partnerIds, articleIds, warehouseIds[data.Warehouses[0].Code], cancellationToken);
+        return new SeededCompany(companyId, administratorId, roleIds, articleIds, warehouseIds, orders, sales);
     }
 
     /// <summary>Number series, then each order confirmed, received (fully or partly) and invoiced as its seed says.</summary>
@@ -212,6 +228,190 @@ internal sealed class MockDataSeeder(IServiceProvider services)
         }
 
         return seeded;
+    }
+
+    /// <summary>
+    /// Number series, the offers that stay offers, then each sales order through its scenario: (offer, accept,) confirm,
+    /// deliver from the first warehouse, invoice, and correct by a credit note or an invoice storno.
+    /// </summary>
+    private async Task<IReadOnlyList<SeededSalesOrder>> SeedSalesAsync(
+        SeedData data,
+        CompanyId companyId,
+        IReadOnlyDictionary<string, Guid> partnerIds,
+        IReadOnlyDictionary<string, Guid> articleIds,
+        Guid warehouseId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var series in data.SalesNumberSeries)
+        {
+            await SendAsync<CreateSalesNumberSeriesHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(new CreateSalesNumberSeries(companyId, series.DocumentType, series.ValidFrom, series.Prefix, series.Padding), ct),
+                $"Create sales number series {series.Prefix}",
+                cancellationToken);
+        }
+
+        await WaitForSalesReferencesAsync(companyId, partnerIds.Count, articleIds.Count, cancellationToken);
+        List<SalesDraftLine> Lines(IEnumerable<SalesLineSeed> lines) =>
+            lines.Select(line => new SalesDraftLine(articleIds[line.ArticleCode], line.Quantity, line.UnitPrice, null)).ToList();
+
+        foreach (var (offer, index) in data.Offers.Select((offer, index) => (offer, index + 1)))
+        {
+            var offerId = await SentOfferAsync(companyId, partnerIds[offer.CustomerCode], offer.OfferDate, Lines(offer.Lines), $"offer {index}", cancellationToken);
+            if (offer.Outcome == OfferOutcome.Rejected)
+            {
+                await SendAsync<RejectOfferHandler>((handler, ct) => handler.HandleAsync(new RejectOffer(companyId, offerId), ct), $"Reject offer {index}", cancellationToken);
+            }
+        }
+
+        var seeded = new List<SeededSalesOrder>();
+        foreach (var (order, index) in data.SalesOrders.Select((order, index) => (order, index + 1)))
+        {
+            var customerId = partnerIds[order.CustomerCode];
+            Guid orderId;
+            if (order.FromOffer)
+            {
+                var offerId = await SentOfferAsync(companyId, customerId, order.OfferDate, Lines(order.Lines), $"offer for sales order {index}", cancellationToken);
+                orderId = await SendAsync<AcceptOfferHandler, Guid>(
+                    (handler, ct) => handler.HandleAsync(new AcceptOffer(companyId, offerId, order.OrderDate, warehouseId), ct), $"Accept offer for sales order {index}", cancellationToken);
+            }
+            else
+            {
+                orderId = await SendAsync<CreateSalesOrderHandler, Guid>(
+                    (handler, ct) => handler.HandleAsync(new CreateSalesOrder(companyId, customerId, order.OrderDate, warehouseId, null, Lines(order.Lines)), ct),
+                    $"Create sales order {index}",
+                    cancellationToken);
+            }
+
+            await SendAsync<ConfirmSalesOrderHandler>((handler, ct) => handler.HandleAsync(new ConfirmSalesOrder(companyId, orderId), ct), $"Confirm sales order {index}", cancellationToken);
+            if (order.DeliveredShare == 0m)
+            {
+                seeded.Add(new SeededSalesOrder(order, orderId, null, null, null, null));
+                continue;
+            }
+
+            var orderLineIds = await SalesOrderLineIdsAsync(orderId, cancellationToken);
+            var deliveryId = await SendAsync<CreateDeliveryNoteHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(
+                    new CreateDeliveryNote(
+                        companyId, orderId, warehouseId, order.DeliveryDate, null,
+                        order.Lines.Select((line, i) => new DeliveryNoteLineInput(orderLineIds[i], SalesOrderSeed.Delivered(line, order.DeliveredShare), null, []))
+                            .Where(line => line.Quantity > 0m)
+                            .ToList()),
+                    ct),
+                $"Create delivery note for sales order {index}",
+                cancellationToken);
+            await SendAsync<ConfirmDeliveryNoteHandler>(
+                (handler, ct) => handler.HandleAsync(new ConfirmDeliveryNote(companyId, deliveryId), ct), $"Confirm delivery note for sales order {index}", cancellationToken);
+            if (!order.Invoiced)
+            {
+                seeded.Add(new SeededSalesOrder(order, orderId, deliveryId, null, null, null));
+                continue;
+            }
+
+            var deliveryLineIds = await DeliveryLineIdsAsync(deliveryId, cancellationToken);
+            var invoiceLines = new List<SalesInvoiceDraftLine>();
+            var deliveryLine = 0;
+            for (var i = 0; i < order.Lines.Count; i++)
+            {
+                var line = order.Lines[i];
+                if (line.IsService)
+                {
+                    invoiceLines.Add(new SalesInvoiceDraftLine(null, orderLineIds[i], line.Quantity));
+                }
+                else if (SalesOrderSeed.Delivered(line, order.DeliveredShare) is var delivered and > 0m)
+                {
+                    invoiceLines.Add(new SalesInvoiceDraftLine(deliveryLineIds[deliveryLine++], null, delivered));
+                }
+            }
+
+            var invoiceId = await SendAsync<CreateSalesInvoiceHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(new CreateSalesInvoice(companyId, orderId, order.InvoiceDate, order.InvoiceDate.AddDays(15), null, invoiceLines), ct),
+                $"Create invoice for sales order {index}",
+                cancellationToken);
+            await SendAsync<ConfirmSalesInvoiceHandler>(
+                (handler, ct) => handler.HandleAsync(new ConfirmSalesInvoice(companyId, invoiceId), ct), $"Issue invoice for sales order {index}", cancellationToken);
+            seeded.Add(await CorrectAsync(companyId, warehouseId, order, orderId, deliveryId, invoiceId, index, cancellationToken));
+        }
+
+        return seeded;
+    }
+
+    private async Task<SeededSalesOrder> CorrectAsync(
+        CompanyId companyId, Guid warehouseId, SalesOrderSeed order, Guid orderId, Guid deliveryId, Guid invoiceId, int index, CancellationToken cancellationToken)
+    {
+        if (order.Correction == SalesCorrection.InvoiceStorno)
+        {
+            var stornoId = await SendAsync<StornoSalesInvoiceHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(new StornoSalesInvoice(companyId, invoiceId), ct), $"Reverse invoice of sales order {index}", cancellationToken);
+            return new SeededSalesOrder(order, orderId, deliveryId, invoiceId, null, stornoId);
+        }
+
+        if (order.Correction == SalesCorrection.None)
+        {
+            return new SeededSalesOrder(order, orderId, deliveryId, invoiceId, null, null);
+        }
+
+        await using var scope = services.CreateAsyncScope();
+        var first = await scope.ServiceProvider.GetRequiredService<ISalesDbContext>().SalesInvoices
+            .Where(i => i.Id == invoiceId).SelectMany(i => i.Lines).Where(l => !l.IsService).OrderBy(l => l.LineNumber).FirstAsync(cancellationToken);
+        var line = order.Correction == SalesCorrection.Return
+            ? new CreditNoteDraftLine(first.Id, CreditKind.Return, first.Quantity == decimal.Truncate(first.Quantity) ? 1m : Math.Round(first.Quantity / 2m, 2), null, [])
+            : new CreditNoteDraftLine(first.Id, CreditKind.ValueReduction, null, Math.Round(first.NetAmount * 0.1m, 2, MidpointRounding.AwayFromZero), []);
+        var creditNoteId = await SendAsync<CreateCreditNoteHandler, Guid>(
+            (handler, ct) => handler.HandleAsync(
+                new CreateCreditNote(companyId, invoiceId, order.CreditNoteDate, line.Kind == CreditKind.Return ? warehouseId : null, "Reklamacija kupca", [line]), ct),
+            $"Create credit note for sales order {index}",
+            cancellationToken);
+        await SendAsync<ConfirmCreditNoteHandler>(
+            (handler, ct) => handler.HandleAsync(new ConfirmCreditNote(companyId, creditNoteId), ct), $"Confirm credit note for sales order {index}", cancellationToken);
+        return new SeededSalesOrder(order, orderId, deliveryId, invoiceId, creditNoteId, null);
+    }
+
+    private async Task<Guid> SentOfferAsync(CompanyId companyId, Guid customerId, DateOnly date, List<SalesDraftLine> lines, string what, CancellationToken cancellationToken)
+    {
+        var offerId = await SendAsync<CreateOfferHandler, Guid>(
+            (handler, ct) => handler.HandleAsync(new CreateOffer(companyId, customerId, date, date.AddDays(15), null, lines), ct), $"Create {what}", cancellationToken);
+        await SendAsync<SendOfferHandler>((handler, ct) => handler.HandleAsync(new SendOffer(companyId, offerId), ct), $"Send {what}", cancellationToken);
+        return offerId;
+    }
+
+    private async Task<IReadOnlyList<Guid>> SalesOrderLineIdsAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ISalesDbContext>().SalesOrders
+            .Where(o => o.Id == orderId).SelectMany(o => o.Lines).OrderBy(l => l.LineNumber).Select(l => l.Id).ToListAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Guid>> DeliveryLineIdsAsync(Guid deliveryNoteId, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ISalesDbContext>().DeliveryNotes
+            .Where(d => d.Id == deliveryNoteId).SelectMany(d => d.Lines).OrderBy(l => l.LineNumber).Select(l => l.Id).ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Sales learns about partners and articles through Core's outbox, moments after they are created.</summary>
+    private async Task WaitForSalesReferencesAsync(CompanyId companyId, int partners, int articles, CancellationToken cancellationToken)
+    {
+        var deadline = DateTimeOffset.UtcNow + EventTimeout;
+        while (true)
+        {
+            await using (var scope = services.CreateAsyncScope())
+            {
+                var sales = scope.ServiceProvider.GetRequiredService<ISalesDbContext>();
+                if (await sales.Customers.CountAsync(c => c.CompanyId == companyId, cancellationToken) == partners
+                    && await sales.Articles.CountAsync(a => a.CompanyId == companyId, cancellationToken) == articles)
+                {
+                    return;
+                }
+            }
+
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new SeedFailedException("Business partners and articles did not reach the Sales module; is the outbox processor running?");
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+        }
     }
 
     private async Task<IReadOnlyList<Guid>> PurchaseOrderLineIdsAsync(Guid orderId, CancellationToken cancellationToken)

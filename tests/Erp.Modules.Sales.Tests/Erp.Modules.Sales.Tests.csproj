@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <!-- Sales is tested with the real Warehouse module behind its command contract, and the real BiH PDV calculator. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Erp.Localization.BiH\Erp.Localization.BiH.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Sales\Erp.Modules.Sales.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Erp.Modules.Warehouse\Erp.Modules.Warehouse.csproj" />
+  </ItemGroup>
+
+</Project>

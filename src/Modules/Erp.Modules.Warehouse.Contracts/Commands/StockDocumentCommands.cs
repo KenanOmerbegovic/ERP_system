@@ -27,10 +27,32 @@ public sealed record StockReceiptCommandLine(
     DateOnly? LotExpiryDate,
     IReadOnlyList<string> SerialNumbers);
 
-/// <summary>Reverse (storno) the stock document an earlier command with <see cref="OriginalKey"/> created.</summary>
+/// <summary>
+/// Issue goods from <see cref="WarehouseId"/> at the weighted average cost; the stock document is created and confirmed
+/// in one step. Fails with <c>Stock.Insufficient</c> if any line would take more than is in stock.
+/// </summary>
+public sealed record StockIssueCommand(
+    IdempotencyKey Key,
+    CompanyId CompanyId,
+    Guid WarehouseId,
+    DateOnly DocumentDate,
+    string? Note,
+    IReadOnlyList<StockIssueCommandLine> Lines);
+
+/// <summary>LOT and serial numbers as the article's tracking type requires; the cost comes from stock.</summary>
+public sealed record StockIssueCommandLine(
+    Guid ArticleId,
+    decimal Quantity,
+    string? LotNumber,
+    IReadOnlyList<string> SerialNumbers);
+
+/// <summary>Reverse (storno) the stock document an earlier receive or issue command with <see cref="OriginalKey"/> created.</summary>
 public sealed record StockReversalCommand(IdempotencyKey Key, CompanyId CompanyId, IdempotencyKey OriginalKey);
 
-/// <summary>The confirmed stock document; <see cref="LineValues"/> are the KM values of its lines, in the order sent.</summary>
+/// <summary>
+/// The confirmed stock document; <see cref="LineValues"/> are the KM values of its lines, in the order sent. For an
+/// issue they are the cost of the goods issued (cost of goods sold for a delivery).
+/// </summary>
 public sealed record StockDocumentReference(Guid DocumentId, string Number, decimal TotalValue, IReadOnlyList<decimal> LineValues);
 
 /// <summary>
@@ -43,6 +65,8 @@ public sealed record StockDocumentReference(Guid DocumentId, string Number, deci
 public interface IStockDocumentCommands
 {
     Task<Result<StockDocumentReference>> ReceiveAsync(StockReceiptCommand command, CancellationToken cancellationToken);
+
+    Task<Result<StockDocumentReference>> IssueAsync(StockIssueCommand command, CancellationToken cancellationToken);
 
     Task<Result<StockDocumentReference>> ReverseAsync(StockReversalCommand command, CancellationToken cancellationToken);
 }
