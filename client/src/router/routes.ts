@@ -1,7 +1,12 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { navigation } from './navigation';
-import { CorePermissions, PurchasingPermissions, WarehousePermissions } from './permissions';
+import {
+  CorePermissions,
+  PurchasingPermissions,
+  SalesPermissions,
+  WarehousePermissions,
+} from './permissions';
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -28,6 +33,12 @@ const built = new Set([
   'goods-receipts',
   'supplier-invoices',
   'purchasing-number-series',
+  'offers',
+  'sales-orders',
+  'delivery-notes',
+  'sales-invoices',
+  'credit-notes',
+  'sales-number-series',
 ]);
 
 /** Navigation items without a page yet. */
@@ -155,6 +166,47 @@ const routes: RouteRecordRaw[] = [
         name: 'purchasing-number-series',
         component: () => import('@/pages/purchasing/PurchasingNumberSeriesPage.vue'),
         meta: { permission: PurchasingPermissions.ordersRead },
+      },
+      ...documentRoutes(
+        'offers',
+        'offer',
+        SalesPermissions.offersRead,
+        () => import('@/pages/sales/OffersPage.vue'),
+        () => import('@/pages/sales/OfferPage.vue'),
+      ),
+      ...documentRoutes(
+        'sales-orders',
+        'sales-order',
+        SalesPermissions.ordersRead,
+        () => import('@/pages/sales/SalesOrdersPage.vue'),
+        () => import('@/pages/sales/SalesOrderPage.vue'),
+      ),
+      ...documentRoutes(
+        'delivery-notes',
+        'delivery-note',
+        SalesPermissions.deliveriesRead,
+        () => import('@/pages/sales/DeliveryNotesPage.vue'),
+        () => import('@/pages/sales/DeliveryNotePage.vue'),
+      ),
+      ...documentRoutes(
+        'sales-invoices',
+        'sales-invoice',
+        SalesPermissions.invoicesRead,
+        () => import('@/pages/sales/SalesInvoicesPage.vue'),
+        () => import('@/pages/sales/SalesInvoicePage.vue'),
+      ),
+      ...documentRoutes(
+        'credit-notes',
+        'credit-note',
+        SalesPermissions.creditNotesRead,
+        () => import('@/pages/sales/CreditNotesPage.vue'),
+        () => import('@/pages/sales/CreditNotePage.vue'),
+      ),
+      {
+        path: 'sales-number-series',
+        name: 'sales-number-series',
+        component: () => import('@/pages/sales/SalesNumberSeriesPage.vue'),
+        meta: { permission: SalesPermissions.ordersRead },
       },
       ...placeholders,
       ...placeholderModules,

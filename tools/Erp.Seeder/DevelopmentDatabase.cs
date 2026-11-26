@@ -5,6 +5,8 @@ using Erp.Modules.Identity;
 using Erp.Modules.Identity.Infrastructure;
 using Erp.Modules.Purchasing;
 using Erp.Modules.Purchasing.Infrastructure;
+using Erp.Modules.Sales;
+using Erp.Modules.Sales.Infrastructure;
 using Erp.Modules.Warehouse;
 using Erp.Modules.Warehouse.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +27,8 @@ internal static class DevelopmentDatabase
         "DROP SCHEMA IF EXISTS " + CoreDbContext.Schema + " CASCADE; " +
         "DROP SCHEMA IF EXISTS " + IdentityDbContext.Schema + " CASCADE; " +
         "DROP SCHEMA IF EXISTS " + WarehouseDbContext.Schema + " CASCADE; " +
-        "DROP SCHEMA IF EXISTS " + PurchasingDbContext.Schema + " CASCADE;";
+        "DROP SCHEMA IF EXISTS " + PurchasingDbContext.Schema + " CASCADE; " +
+        "DROP SCHEMA IF EXISTS " + SalesDbContext.Schema + " CASCADE;";
 
     public static async Task PrepareAsync(IServiceProvider services, string companyTaxId, bool reset, CancellationToken cancellationToken)
     {
@@ -52,6 +55,7 @@ internal static class DevelopmentDatabase
         await services.MigrateIdentityDatabaseAsync(cancellationToken);
         await services.MigrateWarehouseDatabaseAsync(cancellationToken);
         await services.MigratePurchasingDatabaseAsync(cancellationToken);
+        await services.MigrateSalesDatabaseAsync(cancellationToken);
 
         await using (var scope = services.CreateAsyncScope())
         {

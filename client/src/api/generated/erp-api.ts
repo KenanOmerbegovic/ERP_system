@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  AcceptOfferRequest,
   AuthResponse,
   BusinessPartnerRequest,
   ChangePasswordRequest,
@@ -13,15 +14,26 @@ import type {
   CreateArticleRequest,
   CreateUserRequest,
   CreatedResponse,
+  CreditNoteRequest,
+  CreditNoteResponse,
   CurrentUserResponse,
+  DeliveryNoteRequest,
+  DeliveryNoteResponse,
   GoodsReceiptRequest,
   GoodsReceiptResponse,
+  InvoiceableLineResponse,
   InvoiceableReceiptLineResponse,
   ListArticlesParams,
   ListBusinessPartnersParams,
+  ListCreditNotesParams,
+  ListDeliveryNotesParams,
   ListGoodsReceiptsParams,
+  ListInvoiceableLinesParams,
   ListInvoiceableReceiptLinesParams,
+  ListOffersParams,
   ListPurchaseOrdersParams,
+  ListSalesInvoicesParams,
+  ListSalesOrdersParams,
   ListSerialNumbersParams,
   ListStockBalancesParams,
   ListStockDocumentsParams,
@@ -31,10 +43,17 @@ import type {
   MemberResponse,
   NumberSeriesRequest,
   NumberSeriesResponse,
+  OfferRequest,
+  OfferResponse,
   PagedResponseOfArticleResponse,
   PagedResponseOfBusinessPartnerResponse,
+  PagedResponseOfCreditNoteSummaryResponse,
+  PagedResponseOfDeliveryNoteSummaryResponse,
   PagedResponseOfGoodsReceiptSummaryResponse,
+  PagedResponseOfOfferSummaryResponse,
   PagedResponseOfPurchaseOrderSummaryResponse,
+  PagedResponseOfSalesInvoiceSummaryResponse,
+  PagedResponseOfSalesOrderSummaryResponse,
   PagedResponseOfSerialNumberResponse,
   PagedResponseOfStockBalanceResponse,
   PagedResponseOfStockDocumentSummaryResponse,
@@ -47,6 +66,12 @@ import type {
   RegisterAccountRequest,
   RoleRequest,
   RoleResponse,
+  SalesInvoiceRequest,
+  SalesInvoiceResponse,
+  SalesNumberSeriesRequest,
+  SalesNumberSeriesResponse,
+  SalesOrderRequest,
+  SalesOrderResponse,
   StockDocumentRequest,
   StockDocumentResponse,
   SupplierInvoiceRequest,
@@ -838,6 +863,470 @@ export const createPurchasingNumberSeries = (
       options);
     }
 
+export const listOffers = (
+    companyId: string,
+    params?: ListOffersParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfOfferSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfOfferSummaryResponse>(
+      {url: `/api/companies/${companyId}/offers`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createOffer = (
+    companyId: string,
+    offerRequest: BodyType<OfferRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/offers`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: offerRequest
+    },
+      options);
+    }
+
+export const getOffer = (
+    companyId: string,
+    offerId: string,
+ options?: SecondParameter<typeof apiRequest<OfferResponse>>,) => {
+      return apiRequest<OfferResponse>(
+      {url: `/api/companies/${companyId}/offers/${offerId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateOffer = (
+    companyId: string,
+    offerId: string,
+    offerRequest: BodyType<OfferRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/offers/${offerId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: offerRequest
+    },
+      options);
+    }
+
+export const deleteOffer = (
+    companyId: string,
+    offerId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/offers/${offerId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Numbers the offer and freezes it. 422 NumberSeries.NotConfigured without a number series.
+ */
+export const sendOffer = (
+    companyId: string,
+    offerId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/offers/${offerId}/send`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * The customer accepted the offer: creates a draft sales order with its lines and returns the order's id (FR-SAL-02).
+ */
+export const acceptOffer = (
+    companyId: string,
+    offerId: string,
+    acceptOfferRequest: BodyType<AcceptOfferRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/offers/${offerId}/accept`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: acceptOfferRequest
+    },
+      options);
+    }
+
+export const rejectOffer = (
+    companyId: string,
+    offerId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/offers/${offerId}/reject`, method: 'POST'
+    },
+      options);
+    }
+
+export const listSalesOrders = (
+    companyId: string,
+    params?: ListSalesOrdersParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfSalesOrderSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfSalesOrderSummaryResponse>(
+      {url: `/api/companies/${companyId}/sales-orders`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createSalesOrder = (
+    companyId: string,
+    salesOrderRequest: BodyType<SalesOrderRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/sales-orders`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: salesOrderRequest
+    },
+      options);
+    }
+
+export const getSalesOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<SalesOrderResponse>>,) => {
+      return apiRequest<SalesOrderResponse>(
+      {url: `/api/companies/${companyId}/sales-orders/${orderId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateSalesOrder = (
+    companyId: string,
+    orderId: string,
+    salesOrderRequest: BodyType<SalesOrderRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-orders/${orderId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: salesOrderRequest
+    },
+      options);
+    }
+
+/**
+ * Deletes a draft order; for an order made from an offer, the offer is open (sent) again.
+ */
+export const deleteSalesOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-orders/${orderId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Numbers the order and makes it immutable. 422 NumberSeries.NotConfigured without a number series.
+ */
+export const confirmSalesOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-orders/${orderId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Reverses an order nothing was delivered or invoiced on; returns the storno's id. 409 SalesOrder.HasDeliveries otherwise.
+ */
+export const stornoSalesOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/sales-orders/${orderId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listDeliveryNotes = (
+    companyId: string,
+    params?: ListDeliveryNotesParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfDeliveryNoteSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfDeliveryNoteSummaryResponse>(
+      {url: `/api/companies/${companyId}/delivery-notes`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+/**
+ * Saves a draft delivery note against a confirmed order; stock leaves when it is confirmed.
+ */
+export const createDeliveryNote = (
+    companyId: string,
+    deliveryNoteRequest: BodyType<DeliveryNoteRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/delivery-notes`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: deliveryNoteRequest
+    },
+      options);
+    }
+
+export const getDeliveryNote = (
+    companyId: string,
+    deliveryNoteId: string,
+ options?: SecondParameter<typeof apiRequest<DeliveryNoteResponse>>,) => {
+      return apiRequest<DeliveryNoteResponse>(
+      {url: `/api/companies/${companyId}/delivery-notes/${deliveryNoteId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateDeliveryNote = (
+    companyId: string,
+    deliveryNoteId: string,
+    deliveryNoteRequest: BodyType<DeliveryNoteRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/delivery-notes/${deliveryNoteId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: deliveryNoteRequest
+    },
+      options);
+    }
+
+export const deleteDeliveryNote = (
+    companyId: string,
+    deliveryNoteId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/delivery-notes/${deliveryNoteId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Issues the goods from the warehouse and numbers the note. 409 Stock.Insufficient (with shortages) if there is not enough stock: the note stays a draft (FR-WH-03). Confirming a note left in the Confirming state completes it; stock moves only once.
+ */
+export const confirmDeliveryNote = (
+    companyId: string,
+    deliveryNoteId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/delivery-notes/${deliveryNoteId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Brings the goods back into the warehouse with a storno note dated today; returns its id. 409 DeliveryNote.Invoiced if the note is invoiced.
+ */
+export const stornoDeliveryNote = (
+    companyId: string,
+    deliveryNoteId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/delivery-notes/${deliveryNoteId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listSalesInvoices = (
+    companyId: string,
+    params?: ListSalesInvoicesParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfSalesInvoiceSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfSalesInvoiceSummaryResponse>(
+      {url: `/api/companies/${companyId}/sales-invoices`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createSalesInvoice = (
+    companyId: string,
+    salesInvoiceRequest: BodyType<SalesInvoiceRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/sales-invoices`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: salesInvoiceRequest
+    },
+      options);
+    }
+
+export const getSalesInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<SalesInvoiceResponse>>,) => {
+      return apiRequest<SalesInvoiceResponse>(
+      {url: `/api/companies/${companyId}/sales-invoices/${invoiceId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateSalesInvoice = (
+    companyId: string,
+    invoiceId: string,
+    salesInvoiceRequest: BodyType<SalesInvoiceRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-invoices/${invoiceId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: salesInvoiceRequest
+    },
+      options);
+    }
+
+export const deleteSalesInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-invoices/${invoiceId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Confirmed delivery lines and service order lines of the order that still have quantity to invoice.
+ */
+export const listInvoiceableLines = (
+    companyId: string,
+    params: ListInvoiceableLinesParams,
+ options?: SecondParameter<typeof apiRequest<InvoiceableLineResponse[]>>,) => {
+      return apiRequest<InvoiceableLineResponse[]>(
+      {url: `/api/companies/${companyId}/sales-invoices/invoiceable-lines`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+/**
+ * Issues the invoice: numbers it, recomputes its PDV and publishes it for Finance. It is immutable afterwards.
+ */
+export const confirmSalesInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/sales-invoices/${invoiceId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Reverses the whole invoice; returns the storno's id. 409 SalesInvoice.Credited once a credit note was made on it.
+ */
+export const stornoSalesInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/sales-invoices/${invoiceId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listCreditNotes = (
+    companyId: string,
+    params?: ListCreditNotesParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfCreditNoteSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfCreditNoteSummaryResponse>(
+      {url: `/api/companies/${companyId}/credit-notes`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createCreditNote = (
+    companyId: string,
+    creditNoteRequest: BodyType<CreditNoteRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/credit-notes`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: creditNoteRequest
+    },
+      options);
+    }
+
+export const getCreditNote = (
+    companyId: string,
+    creditNoteId: string,
+ options?: SecondParameter<typeof apiRequest<CreditNoteResponse>>,) => {
+      return apiRequest<CreditNoteResponse>(
+      {url: `/api/companies/${companyId}/credit-notes/${creditNoteId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateCreditNote = (
+    companyId: string,
+    creditNoteId: string,
+    creditNoteRequest: BodyType<CreditNoteRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/credit-notes/${creditNoteId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: creditNoteRequest
+    },
+      options);
+    }
+
+export const deleteCreditNote = (
+    companyId: string,
+    creditNoteId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/credit-notes/${creditNoteId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Numbers the credit note and credits the invoice; returned goods come back into the warehouse at their delivery cost. Warehouse refusals are passed on and the credit note is a draft again. Confirming one left in the Confirming state completes it.
+ */
+export const confirmCreditNote = (
+    companyId: string,
+    creditNoteId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/credit-notes/${creditNoteId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Reverses the credit note (returned goods leave the warehouse again); returns the storno's id. 409 Stock.Insufficient (with shortages) if the returned goods are gone.
+ */
+export const stornoCreditNote = (
+    companyId: string,
+    creditNoteId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/credit-notes/${creditNoteId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listSalesNumberSeries = (
+    companyId: string,
+ options?: SecondParameter<typeof apiRequest<SalesNumberSeriesResponse[]>>,) => {
+      return apiRequest<SalesNumberSeriesResponse[]>(
+      {url: `/api/companies/${companyId}/sales-number-series`, method: 'GET'
+    },
+      options);
+    }
+
+export const createSalesNumberSeries = (
+    companyId: string,
+    salesNumberSeriesRequest: BodyType<SalesNumberSeriesRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/sales-number-series`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: salesNumberSeriesRequest
+    },
+      options);
+    }
+
 export type LoginResult = NonNullable<Awaited<ReturnType<typeof login>>>
 export type RefreshSessionResult = NonNullable<Awaited<ReturnType<typeof refreshSession>>>
 export type LogoutResult = NonNullable<Awaited<ReturnType<typeof logout>>>
@@ -903,3 +1392,42 @@ export type ConfirmSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof
 export type StornoSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof stornoSupplierInvoice>>>
 export type ListPurchasingNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof listPurchasingNumberSeries>>>
 export type CreatePurchasingNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof createPurchasingNumberSeries>>>
+export type ListOffersResult = NonNullable<Awaited<ReturnType<typeof listOffers>>>
+export type CreateOfferResult = NonNullable<Awaited<ReturnType<typeof createOffer>>>
+export type GetOfferResult = NonNullable<Awaited<ReturnType<typeof getOffer>>>
+export type UpdateOfferResult = NonNullable<Awaited<ReturnType<typeof updateOffer>>>
+export type DeleteOfferResult = NonNullable<Awaited<ReturnType<typeof deleteOffer>>>
+export type SendOfferResult = NonNullable<Awaited<ReturnType<typeof sendOffer>>>
+export type AcceptOfferResult = NonNullable<Awaited<ReturnType<typeof acceptOffer>>>
+export type RejectOfferResult = NonNullable<Awaited<ReturnType<typeof rejectOffer>>>
+export type ListSalesOrdersResult = NonNullable<Awaited<ReturnType<typeof listSalesOrders>>>
+export type CreateSalesOrderResult = NonNullable<Awaited<ReturnType<typeof createSalesOrder>>>
+export type GetSalesOrderResult = NonNullable<Awaited<ReturnType<typeof getSalesOrder>>>
+export type UpdateSalesOrderResult = NonNullable<Awaited<ReturnType<typeof updateSalesOrder>>>
+export type DeleteSalesOrderResult = NonNullable<Awaited<ReturnType<typeof deleteSalesOrder>>>
+export type ConfirmSalesOrderResult = NonNullable<Awaited<ReturnType<typeof confirmSalesOrder>>>
+export type StornoSalesOrderResult = NonNullable<Awaited<ReturnType<typeof stornoSalesOrder>>>
+export type ListDeliveryNotesResult = NonNullable<Awaited<ReturnType<typeof listDeliveryNotes>>>
+export type CreateDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof createDeliveryNote>>>
+export type GetDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof getDeliveryNote>>>
+export type UpdateDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof updateDeliveryNote>>>
+export type DeleteDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof deleteDeliveryNote>>>
+export type ConfirmDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof confirmDeliveryNote>>>
+export type StornoDeliveryNoteResult = NonNullable<Awaited<ReturnType<typeof stornoDeliveryNote>>>
+export type ListSalesInvoicesResult = NonNullable<Awaited<ReturnType<typeof listSalesInvoices>>>
+export type CreateSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof createSalesInvoice>>>
+export type GetSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof getSalesInvoice>>>
+export type UpdateSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof updateSalesInvoice>>>
+export type DeleteSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof deleteSalesInvoice>>>
+export type ListInvoiceableLinesResult = NonNullable<Awaited<ReturnType<typeof listInvoiceableLines>>>
+export type ConfirmSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof confirmSalesInvoice>>>
+export type StornoSalesInvoiceResult = NonNullable<Awaited<ReturnType<typeof stornoSalesInvoice>>>
+export type ListCreditNotesResult = NonNullable<Awaited<ReturnType<typeof listCreditNotes>>>
+export type CreateCreditNoteResult = NonNullable<Awaited<ReturnType<typeof createCreditNote>>>
+export type GetCreditNoteResult = NonNullable<Awaited<ReturnType<typeof getCreditNote>>>
+export type UpdateCreditNoteResult = NonNullable<Awaited<ReturnType<typeof updateCreditNote>>>
+export type DeleteCreditNoteResult = NonNullable<Awaited<ReturnType<typeof deleteCreditNote>>>
+export type ConfirmCreditNoteResult = NonNullable<Awaited<ReturnType<typeof confirmCreditNote>>>
+export type StornoCreditNoteResult = NonNullable<Awaited<ReturnType<typeof stornoCreditNote>>>
+export type ListSalesNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof listSalesNumberSeries>>>
+export type CreateSalesNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof createSalesNumberSeries>>>

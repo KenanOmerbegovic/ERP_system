@@ -111,6 +111,60 @@ public sealed class StockCommandTests(WarehouseDatabase database)
         ResultAssert.Fails(unknown, StockCommandErrors.OriginalNotFound);
     }
 
+    [Fact]
+    public async Task FR_SAL_03_issue_takes_stock_at_weighted_average_once_per_key()
+    {
+        var (warehouse, article) = await SetUpAsync();
+        ResultAssert.Succeeds(await ReceiveAsync(Receipt(warehouse, article, 2m, 1m)));
+        ResultAssert.Succeeds(await ReceiveAsync(Receipt(warehouse, article, 2m, 2m)));
+        var command = Issue(warehouse, article, 3m);
+
+        var first = await IssueAsync(command);
+        var again = await IssueAsync(command);
+
+        ResultAssert.Succeeds(first);
+        Assert.Equal([4.50m], first.Value.LineValues);
+        Assert.Equal(first.Value.DocumentId, again.Value.DocumentId);
+        Assert.Equal(1m, (await _scenario.StockAsync(warehouse, article))!.Quantity);
+        var document = await _scenario.DocumentAsync(first.Value.DocumentId);
+        Assert.Equal(StockDocumentType.Issue, document.Type);
+        Assert.Equal(("sales", command.Key.SourceDocumentId), (document.SourceModule, document.SourceDocumentId));
+    }
+
+    [Fact]
+    public async Task FR_WH_03_issue_beyond_stock_fails_with_shortages_and_leaves_nothing_behind()
+    {
+        var (warehouse, article) = await SetUpAsync();
+        ResultAssert.Succeeds(await ReceiveAsync(Receipt(warehouse, article, 2m, 1m)));
+        var command = Issue(warehouse, article, 5m);
+
+        var tooMuch = await IssueAsync(command);
+        ResultAssert.Succeeds(await ReceiveAsync(Receipt(warehouse, article, 3m, 1m)));
+        var retried = await IssueAsync(command);
+
+        var shortage = Assert.IsType<InsufficientStockError>(tooMuch.Error);
+        var missing = Assert.Single(shortage.Shortages);
+        Assert.Equal((5m, 2m), (missing.Requested, missing.Available));
+        ResultAssert.Succeeds(retried);
+        Assert.Equal(0m, (await _scenario.StockAsync(warehouse, article))!.Quantity);
+    }
+
+    [Fact]
+    public async Task FR_SAL_05_issue_is_reversed_through_the_contract()
+    {
+        var (warehouse, article) = await SetUpAsync();
+        ResultAssert.Succeeds(await ReceiveAsync(Receipt(warehouse, article, 4m, 2m)));
+        var issue = Issue(warehouse, article, 3m);
+        var issued = await IssueAsync(issue);
+
+        var reversed = await ReverseAsync(new StockReversalCommand(new IdempotencyKey("sales", Guid.CreateVersion7()), _scenario.CompanyId, issue.Key));
+
+        ResultAssert.Succeeds(reversed);
+        Assert.Equal(issued.Value.DocumentId, (await _scenario.DocumentAsync(reversed.Value.DocumentId)).ReversesDocumentId);
+        var stock = (await _scenario.StockAsync(warehouse, article))!;
+        Assert.Equal((4m, 8m), (stock.Quantity, stock.Value));
+    }
+
     private async Task<(Guid Warehouse, Guid Article)> SetUpAsync()
     {
         await _scenario.NumberSeriesAsync();
@@ -123,6 +177,13 @@ public sealed class StockCommandTests(WarehouseDatabase database)
 
     private Task<Result<StockDocumentReference>> ReceiveAsync(StockReceiptCommand command) =>
         _scenario.RunAsync(h => h.Commands.ReceiveAsync(command, CancellationToken.None));
+
+    private StockIssueCommand Issue(Guid warehouse, Guid article, decimal quantity) =>
+        new(new IdempotencyKey("sales", Guid.CreateVersion7()), _scenario.CompanyId, warehouse, _scenario.Today, "Otpremnica",
+            [new StockIssueCommandLine(article, quantity, null, [])]);
+
+    private Task<Result<StockDocumentReference>> IssueAsync(StockIssueCommand command) =>
+        _scenario.RunAsync(h => h.Commands.IssueAsync(command, CancellationToken.None));
 
     private Task<Result<StockDocumentReference>> ReverseAsync(StockReversalCommand command) =>
         _scenario.RunAsync(h => h.Commands.ReverseAsync(command, CancellationToken.None));

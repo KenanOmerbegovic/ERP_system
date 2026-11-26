@@ -9,6 +9,8 @@ using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
 using Erp.Modules.Purchasing;
 using Erp.Modules.Purchasing.Contracts;
+using Erp.Modules.Sales;
+using Erp.Modules.Sales.Contracts;
 using Erp.Modules.Warehouse;
 using Erp.Modules.Warehouse.Contracts;
 using Erp.SharedKernel.Time;
@@ -40,10 +42,11 @@ internal static class SeederHost
         builder.Services.AddSingleton<IClock>(new SystemClock(BiHLocale.TimeZone));
         builder.Services.AddSingleton<ITaxIdentifierRules, BiHTaxIdentifierRules>();
         builder.Services.AddScoped<IVatCalculator, BiHVatCalculator>();
-        builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All, .. PurchasingPermissions.All]);
+        builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All, .. PurchasingPermissions.All, .. SalesPermissions.All]);
         builder.Services.AddCoreModule(builder.Configuration);
         builder.Services.AddWarehouseModule(builder.Configuration);
         builder.Services.AddPurchasingModule(builder.Configuration);
+        builder.Services.AddSalesModule(builder.Configuration);
         return builder.Build();
     }
 }

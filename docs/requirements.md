@@ -46,11 +46,11 @@ When a requirement changes, update it here and in the thesis, and note the reaso
 
 | ID | Requirement | Priority | Status |
 | --- | --- | --- | --- |
-| FR-SAL-01 | The system shall allow a sales user to create offers for customers. | High | Planned |
-| FR-SAL-02 | The system shall allow converting an accepted offer into a sales order. | High | Planned |
-| FR-SAL-03 | The system shall allow creating delivery notes and invoices from a sales order. | High | Planned |
-| FR-SAL-04 | The system shall calculate PDV on invoice lines according to the configured rates. | High | Planned |
-| FR-SAL-05 | The system shall prevent editing of confirmed documents and allow corrections only through reversal or credit notes. | High | Planned |
+| FR-SAL-01 | The system shall allow a sales user to create offers for customers. | High | Implemented |
+| FR-SAL-02 | The system shall allow converting an accepted offer into a sales order. | High | Implemented |
+| FR-SAL-03 | The system shall allow creating delivery notes and invoices from a sales order. | High | Implemented |
+| FR-SAL-04 | The system shall calculate PDV on invoice lines according to the configured rates. | High | Implemented |
+| FR-SAL-05 | The system shall prevent editing of confirmed documents and allow corrections only through reversal or credit notes. | High | Implemented |
 
 ### Purchasing
 

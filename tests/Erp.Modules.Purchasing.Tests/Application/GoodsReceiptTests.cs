@@ -226,6 +226,9 @@ public sealed class GoodsReceiptTests(PurchasingHost host)
             throw new TimeoutException("The answer was lost.");
         }
 
+        public Task<Result<StockDocumentReference>> IssueAsync(StockIssueCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<Result<StockDocumentReference>> ReverseAsync(StockReversalCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

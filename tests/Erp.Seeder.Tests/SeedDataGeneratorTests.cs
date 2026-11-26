@@ -23,6 +23,7 @@ public sealed class SeedDataGeneratorTests
         Assert.Equal(profile.Articles, data.Articles.Count);
         Assert.Equal(["Knjigovođa", "Komercijalista", "Skladištar", "Nabavljač"], data.Roles.Select(role => role.Name));
         Assert.Equal(profile.PurchaseOrders, data.PurchaseOrders.Count);
+        Assert.Equal(profile.SalesOrders, data.SalesOrders.Count);
     }
 
     [Fact]

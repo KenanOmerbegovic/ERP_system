@@ -28,8 +28,9 @@ Prerequisites: .NET 10 SDK, Docker, Node.js (for the client).
    Changing the key signs everyone out.
 3. Run the API: `dotnet run --project src/Erp.Api` (http://localhost:5094; migrates the database in Development).
 4. Mock data: `dotnet run --project tools/Erp.Seeder -- --size small --password <password>`.
-   It also creates warehouses, number series and opening stock (confirmed receipts dated 2026-01-01), VAT rates, and
-   purchase orders with goods receipts and supplier invoices.
+   It also creates warehouses, number series and opening stock (confirmed receipts dated 2026-01-01), VAT rates,
+   purchase orders with goods receipts and supplier invoices, and sales: offers, orders, delivery notes, invoices,
+   credit notes and an invoice storno.
    A database seeded before the Warehouse module existed needs `--reset`: Warehouse learns about articles only
    from Core's `ArticleCreated` events, so older articles are unknown to it.
 5. Client: see [client/README.md](client/README.md).
@@ -38,5 +39,5 @@ Outside Development there are no user secrets: set `Identity__Jwt__SigningKey` f
 
 ## Tests
 
-`dotnet test` (needs Docker running; integration, seeder, Warehouse and Purchasing tests use Testcontainers. Warehouse tests
+`dotnet test` (needs Docker running; integration, seeder, Warehouse, Purchasing and Sales tests use Testcontainers. Warehouse tests
 need real PostgreSQL because confirming documents relies on row locks and check constraints).

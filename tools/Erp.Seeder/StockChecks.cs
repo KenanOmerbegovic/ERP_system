@@ -1,3 +1,5 @@
+using Erp.Modules.Sales.Application.Abstractions;
+using Erp.Modules.Sales.Domain.CreditNotes;
 using Erp.Modules.Warehouse.Application.Abstractions;
 using Erp.Modules.Warehouse.Application.Stock;
 using Erp.Modules.Warehouse.Application.StockDocuments;
@@ -13,8 +15,9 @@ namespace Erp.Seeder;
 
 /// <summary>
 /// FR-GEN-03, consistent stock levels: the stock read back through Warehouse's queries equals the generated opening
-/// receipts plus the purchased goods, and the stock ledger agrees with itself (balances = sum of movements, nothing negative, every serial
-/// number in stock counted once).
+/// receipts plus the purchased goods, minus what Sales delivered and plus what credit notes brought back, at the costs
+/// Sales recorded (so Warehouse and the cost of goods sold Finance will post agree); and the stock ledger agrees with
+/// itself (balances = sum of movements, nothing negative, every serial number in stock counted once).
 /// </summary>
 internal static class StockChecks
 {
@@ -30,7 +33,15 @@ internal static class StockChecks
             new ListStockDocuments(seeded.CompanyId, StockDocumentType.Receipt, StockDocumentStatus.Confirmed, null, null, null, null, 1, 1),
             cancellationToken);
         var purchased = seeded.PurchaseOrders.Count(order => order.ReceiptId is not null);
-        Expect(problems, "confirmed stock receipts (opening and purchased)", data.OpeningReceipts.Count + purchased, documents.IsSuccess ? documents.Value.TotalCount : -1);
+        var returned = seeded.SalesOrders.Count(order => order.CreditNoteId is not null && order.Seed.Correction == SalesCorrection.Return);
+        Expect(problems, "confirmed stock receipts (opening, purchased and returned)", data.OpeningReceipts.Count + purchased + returned,
+            documents.IsSuccess ? documents.Value.TotalCount : -1);
+
+        var issues = await provider.GetRequiredService<ListStockDocumentsHandler>().HandleAsync(
+            new ListStockDocuments(seeded.CompanyId, StockDocumentType.Issue, StockDocumentStatus.Confirmed, null, null, null, null, 1, 1),
+            cancellationToken);
+        Expect(problems, "confirmed stock issues (deliveries)", seeded.SalesOrders.Count(order => order.DeliveryNoteId is not null),
+            issues.IsSuccess ? issues.Value.TotalCount : -1);
 
         await CheckBalancesAgainstReceiptsAsync(provider, data, seeded, problems, cancellationToken);
         await CheckLedgerAsync(provider.GetRequiredService<IWarehouseDbContext>(), seeded, problems, cancellationToken);
@@ -39,7 +50,8 @@ internal static class StockChecks
     private static async Task CheckBalancesAgainstReceiptsAsync(
         IServiceProvider provider, SeedData data, SeededCompany seeded, List<string> problems, CancellationToken cancellationToken)
     {
-        // Opening stock, plus what the purchasing scenario received into the first warehouse at the order price.
+        // Opening stock, plus what the purchasing scenario received into the first warehouse at the order price, minus
+        // deliveries and plus returns at the values Sales recorded from the warehouse.
         var firstWarehouse = seeded.WarehouseIds[data.Warehouses[0].Code];
         var opening = data.OpeningReceipts
             .SelectMany(receipt => receipt.Lines.Select(line => (
@@ -53,9 +65,30 @@ internal static class StockChecks
                     Article: seeded.ArticleIds[line.ArticleCode],
                     Quantity: line.ReceivedQuantity(order.Seed.ReceivedShare),
                     Value: line.ReceivedValue(order.Seed.ReceivedShare))));
-        var expected = opening.Concat(purchased)
+        var sales = provider.GetRequiredService<ISalesDbContext>();
+        var delivered = (await sales.DeliveryNotes.AsNoTracking()
+                .Where(d => d.CompanyId == seeded.CompanyId && d.Status == Modules.Sales.Domain.DocumentStatus.Confirmed)
+                .Select(d => new { d.WarehouseId, d.ReversesDeliveryNoteId, d.Lines })
+                .ToListAsync(cancellationToken))
+            .SelectMany(d => d.Lines.Select(line =>
+            {
+                var sign = d.ReversesDeliveryNoteId is null ? -1m : 1m;
+                return (Warehouse: d.WarehouseId, Article: line.ArticleId, Quantity: sign * line.Quantity, Value: sign * (line.CostValue ?? 0m));
+            }));
+        var returnedGoods = (await sales.CreditNotes.AsNoTracking()
+                .Where(c => c.CompanyId == seeded.CompanyId && c.Status == Modules.Sales.Domain.DocumentStatus.Confirmed && c.WarehouseId != null)
+                .Select(c => new { c.WarehouseId, c.ReversesCreditNoteId, c.Lines })
+                .ToListAsync(cancellationToken))
+            .SelectMany(c => c.Lines.Where(line => line.Kind == CreditKind.Return).Select(line =>
+            {
+                var sign = c.ReversesCreditNoteId is null ? 1m : -1m;
+                return (Warehouse: c.WarehouseId!.Value, Article: line.ArticleId, Quantity: sign * line.Quantity, Value: sign * (line.ReturnedCostValue ?? 0m));
+            }));
+        var expected = opening.Concat(purchased).Concat(delivered).Concat(returnedGoods)
             .GroupBy(entry => (entry.Warehouse, entry.Article))
-            .ToDictionary(group => group.Key, group => (Quantity: group.Sum(e => e.Quantity), Value: group.Sum(e => e.Value)));
+            .Select(group => (group.Key, Quantity: group.Sum(e => e.Quantity), Value: group.Sum(e => e.Value)))
+            .Where(entry => entry.Quantity != 0m || entry.Value != 0m) // empty balances are not listed
+            .ToDictionary(entry => entry.Key, entry => (entry.Quantity, entry.Value));
 
         var handler = provider.GetRequiredService<ListStockBalancesHandler>();
         var actual = new List<StockBalanceResponse>();

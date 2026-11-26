@@ -56,6 +56,17 @@ public class BiHVatCalculatorTests
         Assert.Equal(VatErrors.RateNotFoundCode, result.Error.Code);
     }
 
+    [Fact]
+    public async Task FR_SAL_04_unknown_codes_name_every_line_that_uses_them()
+    {
+        var result = await Calculate(
+            new VatLineInput("a", 100m, "PDV99"), new VatLineInput("b", 50m, "PDV17"), new VatLineInput("c", 10m, "X1"), new VatLineInput("d", 5m, "PDV99"));
+
+        var error = Assert.IsType<VatRateNotFoundError>(result.Error);
+        Assert.Equal(["PDV99", "X1"], error.VatCodes);
+        Assert.Equal(["a", "c", "d"], error.LineKeys);
+    }
+
     private Task<Erp.SharedKernel.Results.Result<VatCalculation>> Calculate(params VatLineInput[] lines) => Calculate(Date, lines);
 
     private Task<Erp.SharedKernel.Results.Result<VatCalculation>> Calculate(DateOnly date, params VatLineInput[] lines) =>

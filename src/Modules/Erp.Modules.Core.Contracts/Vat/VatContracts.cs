@@ -50,7 +50,11 @@ public interface IVatCalculator
 public static class VatErrors
 {
     public const string RateNotFoundCode = "Vat.RateNotFound";
-
-    public static Error RateNotFound(string code, DateOnly date) =>
-        Error.Validation(RateNotFoundCode, $"No VAT rate {code} is valid on {date:yyyy-MM-dd}.");
 }
+
+/// <summary>
+/// Vat.RateNotFound (validation): some VAT codes have no rate valid on the date. <see cref="LineKeys"/> are the
+/// <see cref="VatLineInput.Key"/>s of every line that uses one of <see cref="VatCodes"/>, so a caller can point at its lines.
+/// </summary>
+public sealed record VatRateNotFoundError(IReadOnlyList<string> VatCodes, DateOnly Date, IReadOnlyList<string> LineKeys)
+    : Error(VatErrors.RateNotFoundCode, $"No VAT rate {string.Join(", ", VatCodes)} is valid on {Date:yyyy-MM-dd}.", ErrorType.Validation);

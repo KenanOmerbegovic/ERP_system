@@ -5,6 +5,8 @@ using Erp.Modules.Core.Contracts;
 using Erp.Modules.Core.Domain.Articles;
 using Erp.Modules.Purchasing.Contracts;
 using Erp.Modules.Purchasing.Domain.Numbering;
+using Erp.Modules.Sales.Contracts;
+using Erp.Modules.Sales.Domain.Numbering;
 using Erp.Modules.Warehouse.Contracts;
 using Erp.Modules.Warehouse.Domain.StockDocuments;
 
@@ -51,8 +53,10 @@ internal static class SeedDataGenerator
         var warehouses = Warehouses(random, profile.Warehouses);
         var receipts = OpeningReceipts(random, warehouses, articles);
         var orders = PurchaseOrders(random, partners, articles, profile.PurchaseOrders);
+        var (offers, salesOrders) = Sales(random, partners, articles, profile.SalesOrders);
         return new SeedData(
-            company, administrator, roles, units, partners, articles, warehouses, NumberSeries(), receipts, VatRates(), PurchasingNumberSeries(), orders);
+            company, administrator, roles, units, partners, articles, warehouses, NumberSeries(), receipts, VatRates(), PurchasingNumberSeries(), orders,
+            SalesNumberSeries(), offers, salesOrders);
     }
 
     /// <summary>BiH JIB: 13 digits, legal entities start with 4. The PDV number is the JIB without that leading 4.</summary>
@@ -81,12 +85,19 @@ internal static class SeedDataGenerator
                 WarehousePermissions.WarehousesRead, WarehousePermissions.StockDocumentsRead, WarehousePermissions.StockRead,
                 PurchasingPermissions.OrdersRead, PurchasingPermissions.ReceiptsRead, PurchasingPermissions.InvoicesRead,
                 PurchasingPermissions.InvoicesWrite, PurchasingPermissions.InvoicesConfirm,
+                SalesPermissions.OrdersRead, SalesPermissions.DeliveriesRead, SalesPermissions.InvoicesRead, SalesPermissions.InvoicesWrite,
+                SalesPermissions.InvoicesConfirm, SalesPermissions.CreditNotesRead, SalesPermissions.CreditNotesWrite, SalesPermissions.CreditNotesConfirm,
             ],
             Person(random, domain, emails)),
         new("Komercijalista",
             [
                 CorePermissions.CompaniesRead, CorePermissions.BusinessPartnersRead, CorePermissions.BusinessPartnersWrite,
-                CorePermissions.UnitsOfMeasureRead, CorePermissions.ArticlesRead, CorePermissions.ArticlesWrite,
+                CorePermissions.UnitsOfMeasureRead, CorePermissions.ArticlesRead, CorePermissions.ArticlesWrite, CorePermissions.VatRatesRead,
+                WarehousePermissions.WarehousesRead, WarehousePermissions.StockRead,
+                SalesPermissions.OffersRead, SalesPermissions.OffersWrite, SalesPermissions.OffersSend,
+                SalesPermissions.OrdersRead, SalesPermissions.OrdersWrite, SalesPermissions.OrdersConfirm,
+                SalesPermissions.DeliveriesRead, SalesPermissions.DeliveriesWrite,
+                SalesPermissions.InvoicesRead, SalesPermissions.InvoicesWrite, SalesPermissions.CreditNotesRead, SalesPermissions.CreditNotesWrite,
             ],
             Person(random, domain, emails)),
         new("Skladištar",
@@ -97,6 +108,7 @@ internal static class SeedDataGenerator
                 WarehousePermissions.StockDocumentsWrite, WarehousePermissions.StockDocumentsConfirm, WarehousePermissions.StockRead,
                 PurchasingPermissions.OrdersRead, PurchasingPermissions.ReceiptsRead, PurchasingPermissions.ReceiptsWrite,
                 PurchasingPermissions.ReceiptsConfirm,
+                SalesPermissions.OrdersRead, SalesPermissions.DeliveriesRead, SalesPermissions.DeliveriesWrite, SalesPermissions.DeliveriesConfirm,
             ],
             Person(random, domain, emails)),
         new("Nabavljač",
@@ -271,6 +283,71 @@ internal static class SeedDataGenerator
         new(PurchasingDocumentType.GoodsReceipt, OpeningDate, "PRI-", 5),
         new(PurchasingDocumentType.SupplierInvoice, OpeningDate, "ULF-", 5),
     ];
+
+    private static List<SalesNumberSeriesSeed> SalesNumberSeries() =>
+    [
+        new(SalesDocumentType.Offer, OpeningDate, "PON-", 5),
+        new(SalesDocumentType.SalesOrder, OpeningDate, "NRK-", 5),
+        new(SalesDocumentType.DeliveryNote, OpeningDate, "OTP-", 5),
+        new(SalesDocumentType.SalesInvoice, OpeningDate, "IFK-", 5),
+        new(SalesDocumentType.CreditNote, OpeningDate, "KNO-", 5),
+    ];
+
+    /// <summary>
+    /// Sales to active customers, one order every three days from the end of January, of untracked goods (each article
+    /// in at most one order, a few pieces, so the first warehouse's opening stock always covers it) and services. In
+    /// turn: from an accepted offer, fully delivered, invoiced and partly returned; taken directly, half delivered,
+    /// invoiced and reduced in value; from an accepted offer, not delivered yet; taken directly, fully delivered,
+    /// invoiced and the invoice reversed. Plus one offer still open and one rejected.
+    /// </summary>
+    private static (List<OfferSeed> Offers, List<SalesOrderSeed> Orders) Sales(
+        Randomizer random, IReadOnlyList<PartnerSeed> partners, IReadOnlyList<ArticleSeed> articles, int count)
+    {
+        var customers = partners.Where(p => p is { IsCustomer: true, IsActive: true }).ToArray();
+        var goods = new Queue<ArticleSeed>(random.Shuffle(articles.Where(a => a is { Type: ArticleType.Goods, IsActive: true, Tracking: TrackingType.None })));
+        var services = articles.Where(a => a is { Type: ArticleType.Service, IsActive: true }).ToArray();
+        if (customers.Length == 0 || goods.Count == 0)
+        {
+            return ([], []);
+        }
+
+        SalesLineSeed GoodsLine(ArticleSeed article) => new(
+            article.Code,
+            false,
+            article.UnitCode is "kom" or "pak" ? random.Int(2, 4) : Math.Round(random.Decimal(0.2m, 0.9m), 1),
+            Math.Round(random.Decimal(2m, 150m), 2));
+
+        var orders = new List<SalesOrderSeed>();
+        for (var index = 0; index < count && goods.Count >= 2; index++)
+        {
+            var lines = new List<SalesLineSeed> { GoodsLine(goods.Dequeue()), GoodsLine(goods.Dequeue()) };
+            var scenario = index % 4;
+            if (scenario < 2 && services.Length > 0)
+            {
+                lines.Add(new SalesLineSeed(random.ArrayElement(services).Code, true, random.Int(1, 3), Math.Round(random.Decimal(20m, 80m), 2)));
+            }
+
+            orders.Add(new SalesOrderSeed(
+                random.ArrayElement(customers).Code,
+                OpeningDate.AddDays(30 + (3 * index)),
+                lines,
+                FromOffer: scenario is 0 or 2,
+                DeliveredShare: scenario switch { 1 => 0.5m, 2 => 0m, _ => 1m },
+                Invoiced: scenario != 2,
+                scenario switch { 0 => SalesCorrection.Return, 1 => SalesCorrection.ValueReduction, 3 => SalesCorrection.InvoiceStorno, _ => SalesCorrection.None }));
+        }
+
+        var offers = new List<OfferSeed>();
+        foreach (var outcome in new[] { OfferOutcome.Sent, OfferOutcome.Rejected })
+        {
+            if (goods.Count > 0)
+            {
+                offers.Add(new OfferSeed(random.ArrayElement(customers).Code, OpeningDate.AddDays(25), [GoodsLine(goods.Dequeue())], outcome));
+            }
+        }
+
+        return (offers, orders);
+    }
 
     /// <summary>
     /// Orders to active suppliers for active goods that are not serial tracked, one every week from the opening date.

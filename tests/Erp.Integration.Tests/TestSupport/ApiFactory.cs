@@ -3,6 +3,7 @@ using Erp.Modules.Core;
 using Erp.Modules.Identity;
 using Erp.Modules.Identity.Application.Registration;
 using Erp.Modules.Purchasing;
+using Erp.Modules.Sales;
 using Erp.Modules.Warehouse;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,6 +33,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await Services.MigrateIdentityDatabaseAsync(CancellationToken.None);
         await Services.MigrateWarehouseDatabaseAsync(CancellationToken.None);
         await Services.MigratePurchasingDatabaseAsync(CancellationToken.None);
+        await Services.MigrateSalesDatabaseAsync(CancellationToken.None);
     }
 
     /// <summary>A client on https so the Secure refresh cookie round-trips; it keeps cookies like a browser.</summary>

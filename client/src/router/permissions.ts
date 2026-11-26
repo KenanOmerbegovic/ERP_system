@@ -1,42 +1,62 @@
+import { PermissionCode } from '@/api/generated/model';
+
 /**
- * Permission codes the client checks, as declared by each module's Contracts project
- * (Erp.Modules.Core.Contracts/CorePermissions.cs, Erp.Modules.Identity.Contracts IdentityPermissions,
- * Erp.Modules.Warehouse.Contracts/WarehousePermissions.cs, Erp.Modules.Purchasing.Contracts/PurchasingPermissions.cs).
- * The OpenAPI document does not carry them, so they are listed here; GET /api/permissions returns the full set.
+ * Permission codes the client checks, grouped per module. The values come from the generated `PermissionCode`
+ * (Erp.Api publishes every module's codes in its OpenAPI document), so a permission renamed or removed on the server
+ * fails the type check here instead of silently never matching. GET /api/permissions returns the same set.
  */
 export const CorePermissions = {
-  companiesRead: 'core.companies.read',
-  businessPartnersRead: 'core.business-partners.read',
-  articlesRead: 'core.articles.read',
-  unitsOfMeasureRead: 'core.units-of-measure.read',
-  vatRatesRead: 'core.vat-rates.read',
-  vatRatesWrite: 'core.vat-rates.write',
+  companiesRead: PermissionCode.CoreCompaniesRead,
+  businessPartnersRead: PermissionCode.CoreBusinessPartnersRead,
+  articlesRead: PermissionCode.CoreArticlesRead,
+  unitsOfMeasureRead: PermissionCode.CoreUnitsOfMeasureRead,
+  vatRatesRead: PermissionCode.CoreVatRatesRead,
+  vatRatesWrite: PermissionCode.CoreVatRatesWrite,
 } as const;
 
 export const IdentityPermissions = {
-  usersRead: 'identity.users.read',
-  rolesRead: 'identity.roles.read',
+  usersRead: PermissionCode.IdentityUsersRead,
+  rolesRead: PermissionCode.IdentityRolesRead,
 } as const;
 
 export const WarehousePermissions = {
-  warehousesRead: 'warehouse.warehouses.read',
-  warehousesWrite: 'warehouse.warehouses.write',
-  stockDocumentsRead: 'warehouse.stock-documents.read',
-  stockDocumentsWrite: 'warehouse.stock-documents.write',
-  stockDocumentsConfirm: 'warehouse.stock-documents.confirm',
-  stockRead: 'warehouse.stock.read',
-  settingsWrite: 'warehouse.settings.write',
+  warehousesRead: PermissionCode.WarehouseWarehousesRead,
+  warehousesWrite: PermissionCode.WarehouseWarehousesWrite,
+  stockDocumentsRead: PermissionCode.WarehouseStockDocumentsRead,
+  stockDocumentsWrite: PermissionCode.WarehouseStockDocumentsWrite,
+  stockDocumentsConfirm: PermissionCode.WarehouseStockDocumentsConfirm,
+  stockRead: PermissionCode.WarehouseStockRead,
+  settingsWrite: PermissionCode.WarehouseSettingsWrite,
 } as const;
 
 export const PurchasingPermissions = {
-  ordersRead: 'purchasing.orders.read',
-  ordersWrite: 'purchasing.orders.write',
-  ordersConfirm: 'purchasing.orders.confirm',
-  receiptsRead: 'purchasing.receipts.read',
-  receiptsWrite: 'purchasing.receipts.write',
-  receiptsConfirm: 'purchasing.receipts.confirm',
-  invoicesRead: 'purchasing.invoices.read',
-  invoicesWrite: 'purchasing.invoices.write',
-  invoicesConfirm: 'purchasing.invoices.confirm',
-  settingsWrite: 'purchasing.settings.write',
+  ordersRead: PermissionCode.PurchasingOrdersRead,
+  ordersWrite: PermissionCode.PurchasingOrdersWrite,
+  ordersConfirm: PermissionCode.PurchasingOrdersConfirm,
+  receiptsRead: PermissionCode.PurchasingReceiptsRead,
+  receiptsWrite: PermissionCode.PurchasingReceiptsWrite,
+  receiptsConfirm: PermissionCode.PurchasingReceiptsConfirm,
+  invoicesRead: PermissionCode.PurchasingInvoicesRead,
+  invoicesWrite: PermissionCode.PurchasingInvoicesWrite,
+  invoicesConfirm: PermissionCode.PurchasingInvoicesConfirm,
+  settingsWrite: PermissionCode.PurchasingSettingsWrite,
+} as const;
+
+export const SalesPermissions = {
+  offersRead: PermissionCode.SalesOffersRead,
+  offersWrite: PermissionCode.SalesOffersWrite,
+  offersSend: PermissionCode.SalesOffersSend,
+  ordersRead: PermissionCode.SalesOrdersRead,
+  ordersWrite: PermissionCode.SalesOrdersWrite,
+  ordersConfirm: PermissionCode.SalesOrdersConfirm,
+  deliveriesRead: PermissionCode.SalesDeliveriesRead,
+  deliveriesWrite: PermissionCode.SalesDeliveriesWrite,
+  deliveriesConfirm: PermissionCode.SalesDeliveriesConfirm,
+  invoicesRead: PermissionCode.SalesInvoicesRead,
+  invoicesWrite: PermissionCode.SalesInvoicesWrite,
+  invoicesConfirm: PermissionCode.SalesInvoicesConfirm,
+  creditNotesRead: PermissionCode.SalesCreditnotesRead,
+  creditNotesWrite: PermissionCode.SalesCreditnotesWrite,
+  creditNotesConfirm: PermissionCode.SalesCreditnotesConfirm,
+  settingsWrite: PermissionCode.SalesSettingsWrite,
 } as const;

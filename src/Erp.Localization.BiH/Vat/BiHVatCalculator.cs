@@ -17,15 +17,24 @@ public sealed class BiHVatCalculator(IVatRateLookup rates) : IVatCalculator
         ArgumentNullException.ThrowIfNull(request);
 
         var rateByCode = new Dictionary<string, VatRateInfo>(StringComparer.Ordinal);
+        var missing = new List<string>();
         foreach (var code in request.Lines.Select(line => line.VatCode.Trim()).Distinct(StringComparer.Ordinal))
         {
             var rate = await rates.FindAsync(request.CompanyId, code, request.Date, cancellationToken);
             if (rate is null)
             {
-                return VatErrors.RateNotFound(code, request.Date);
+                missing.Add(code);
             }
+            else
+            {
+                rateByCode[code] = rate;
+            }
+        }
 
-            rateByCode[code] = rate;
+        if (missing.Count > 0)
+        {
+            var keys = request.Lines.Where(line => !rateByCode.ContainsKey(line.VatCode.Trim())).Select(line => line.Key).ToList();
+            return new VatRateNotFoundError(missing, request.Date, keys);
         }
 
         var lines = request.Lines
