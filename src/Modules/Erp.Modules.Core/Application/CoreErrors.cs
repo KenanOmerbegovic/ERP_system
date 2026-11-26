@@ -35,4 +35,11 @@ public static class CoreErrors
     /// <summary>The article is LOT or serial tracked, so it cannot become a service.</summary>
     public static readonly Error ServiceCannotBeTracked =
         Error.Validation("Article.ServiceCannotBeTracked", "A LOT or serial tracked article cannot become a service.");
+
+    public static readonly Error DuplicateVatRate =
+        Error.Conflict("VatRate.Duplicate", "This VAT code already has a rate starting on this date.");
+
+    /// <summary>The article's default VAT code is not configured in this company.</summary>
+    public static readonly Error ArticleVatCodeNotFound =
+        Error.Validation("Article.VatCodeNotFound", "The VAT code does not exist in this company.");
 }

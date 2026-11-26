@@ -38,6 +38,7 @@ public sealed record StockDocumentLineRequest(
     DateOnly? LotExpiryDate,
     IReadOnlyList<string>? SerialNumbers);
 
+/// <summary><see cref="SourceModule"/> is set when another module's document created it; only that module reverses it.</summary>
 public sealed record StockDocumentResponse(
     Guid Id,
     StockDocumentKind Type,
@@ -51,7 +52,9 @@ public sealed record StockDocumentResponse(
     Guid? ReversedByDocumentId,
     DateTimeOffset? ConfirmedAt,
     decimal? TotalValue,
-    IReadOnlyList<StockDocumentLineResponse> Lines);
+    IReadOnlyList<StockDocumentLineResponse> Lines,
+    string? SourceModule,
+    Guid? SourceDocumentId);
 
 /// <summary><see cref="Value"/> (KM) is known once the document is confirmed.</summary>
 public sealed record StockDocumentLineResponse(
@@ -78,7 +81,8 @@ public sealed record StockDocumentSummaryResponse(
     Guid? ReversesDocumentId,
     Guid? ReversedByDocumentId,
     int LineCount,
-    decimal? TotalValue);
+    decimal? TotalValue,
+    string? SourceModule);
 
 /// <summary>
 /// Listed (as <c>shortages</c> in the 409 problem with code <c>Stock.Insufficient</c>) when a document would take

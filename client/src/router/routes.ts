@@ -1,7 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { navigation } from './navigation';
-import { CorePermissions, WarehousePermissions } from './permissions';
+import { CorePermissions, PurchasingPermissions, WarehousePermissions } from './permissions';
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -23,6 +23,11 @@ const built = new Set([
   'stock-documents',
   'stock-levels',
   'warehouse-number-series',
+  'vat-rates',
+  'purchase-orders',
+  'goods-receipts',
+  'supplier-invoices',
+  'purchasing-number-series',
 ]);
 
 /** Navigation items without a page yet. */
@@ -45,6 +50,22 @@ const placeholderModules: RouteRecordRaw[] = navigation
     component: placeholderPage,
     meta: { titleKey: `modules.${module.key}.title` },
   }));
+
+type PageLoader = NonNullable<RouteRecordRaw['component']>;
+
+/** A list page and its document page (id "new" opens an empty draft), e.g. purchase-orders and purchase-orders/:id. */
+function documentRoutes(
+  list: string,
+  item: string,
+  permission: string,
+  listPage: PageLoader,
+  itemPage: PageLoader,
+): RouteRecordRaw[] {
+  return [
+    { path: list, name: list, component: listPage, meta: { permission } },
+    { path: `${list}/:id`, name: item, component: itemPage, props: true, meta: { permission } },
+  ];
+}
 
 const routes: RouteRecordRaw[] = [
   {
@@ -101,6 +122,39 @@ const routes: RouteRecordRaw[] = [
         name: 'warehouse-number-series',
         component: () => import('@/pages/warehouse/NumberSeriesPage.vue'),
         meta: { permission: WarehousePermissions.stockDocumentsRead },
+      },
+      {
+        path: 'vat-rates',
+        name: 'vat-rates',
+        component: () => import('@/pages/core/VatRatesPage.vue'),
+        meta: { permission: CorePermissions.vatRatesRead },
+      },
+      ...documentRoutes(
+        'purchase-orders',
+        'purchase-order',
+        PurchasingPermissions.ordersRead,
+        () => import('@/pages/purchasing/PurchaseOrdersPage.vue'),
+        () => import('@/pages/purchasing/PurchaseOrderPage.vue'),
+      ),
+      ...documentRoutes(
+        'goods-receipts',
+        'goods-receipt',
+        PurchasingPermissions.receiptsRead,
+        () => import('@/pages/purchasing/GoodsReceiptsPage.vue'),
+        () => import('@/pages/purchasing/GoodsReceiptPage.vue'),
+      ),
+      ...documentRoutes(
+        'supplier-invoices',
+        'supplier-invoice',
+        PurchasingPermissions.invoicesRead,
+        () => import('@/pages/purchasing/SupplierInvoicesPage.vue'),
+        () => import('@/pages/purchasing/SupplierInvoicePage.vue'),
+      ),
+      {
+        path: 'purchasing-number-series',
+        name: 'purchasing-number-series',
+        component: () => import('@/pages/purchasing/PurchasingNumberSeriesPage.vue'),
+        meta: { permission: PurchasingPermissions.ordersRead },
       },
       ...placeholders,
       ...placeholderModules,

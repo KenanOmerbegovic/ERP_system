@@ -3,6 +3,7 @@ using Erp.Modules.Core.Application.Common;
 using Erp.Modules.Core.Domain.BusinessPartners;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Results;
+using Erp.SharedKernel.Time;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,8 @@ internal sealed class CreateBusinessPartnerValidator : AbstractValidator<CreateB
 public sealed class CreateBusinessPartnerHandler(
     ICoreDbContext db,
     IValidator<CreateBusinessPartner> validator,
-    ITaxIdentifierRules taxRules)
+    ITaxIdentifierRules taxRules,
+    IClock clock)
 {
     public async Task<Result<Guid>> HandleAsync(CreateBusinessPartner command, CancellationToken cancellationToken)
     {
@@ -56,6 +58,7 @@ public sealed class CreateBusinessPartnerHandler(
 
         var partner = BusinessPartner.Create(command.CompanyId, command.ToDetails(taxRules));
         db.BusinessPartners.Add(partner);
+        db.AddIntegrationEvent(partner.ToCreatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);
         return partner.Id;
     }

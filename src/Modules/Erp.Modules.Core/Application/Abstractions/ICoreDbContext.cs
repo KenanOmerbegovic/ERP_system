@@ -2,6 +2,7 @@ using Erp.Modules.Core.Domain.Articles;
 using Erp.Modules.Core.Domain.BusinessPartners;
 using Erp.Modules.Core.Domain.Companies;
 using Erp.Modules.Core.Domain.UnitsOfMeasure;
+using Erp.Modules.Core.Domain.Vat;
 using Erp.SharedKernel.Messaging;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,8 @@ public interface ICoreDbContext
     DbSet<Article> Articles { get; }
 
     DbSet<UnitOfMeasure> UnitsOfMeasure { get; }
+
+    DbSet<VatRate> VatRates { get; }
 
     /// <summary>Queues the event in Core's outbox; it is saved by the next <see cref="SaveChangesAsync"/>.</summary>
     void AddIntegrationEvent(IIntegrationEvent integrationEvent);

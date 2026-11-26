@@ -36,6 +36,11 @@ public sealed class StornoStockDocumentHandler(IWarehouseDbContext db, IStockLoc
             return WarehouseErrors.StockDocumentIsStorno;
         }
 
+        if (original.IsOwnedByAnotherModule)
+        {
+            return WarehouseErrors.StockDocumentOwnedByAnotherModule;
+        }
+
         if (original.ReversedByDocumentId is not null)
         {
             return WarehouseErrors.StockDocumentAlreadyReversed;

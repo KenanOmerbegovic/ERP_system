@@ -117,6 +117,55 @@ namespace Erp.Modules.Warehouse.Infrastructure.Migrations
                     b.ToTable("articles", "warehouse");
                 });
 
+            modelBuilder.Entity("Erp.Modules.Warehouse.Domain.Commands.CommandLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<Guid?>("DocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("document_id");
+
+                    b.Property<string>("PayloadHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("payload_hash");
+
+                    b.Property<Guid>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceModule")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_module");
+
+                    b.HasKey("Id")
+                        .HasName("pk_command_log");
+
+                    b.HasIndex("DocumentId")
+                        .HasDatabaseName("ix_command_log_document_id");
+
+                    b.HasIndex("CompanyId", "SourceModule", "SourceDocumentId", "Action")
+                        .IsUnique()
+                        .HasDatabaseName("ix_command_log_company_id_source_module_source_document_id_act");
+
+                    b.ToTable("command_log", "warehouse");
+                });
+
             modelBuilder.Entity("Erp.Modules.Warehouse.Domain.Numbering.NumberSeries", b =>
                 {
                     b.Property<Guid>("Id")
@@ -446,6 +495,15 @@ namespace Erp.Modules.Warehouse.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("reverses_document_id");
 
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceModule")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_module");
+
                     b.Property<Guid?>("SourceStorehouseId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_warehouse_id");
@@ -621,6 +679,15 @@ namespace Erp.Modules.Warehouse.Infrastructure.Migrations
                         .HasName("pk_number_counters");
 
                     b.ToTable("number_counters", "warehouse");
+                });
+
+            modelBuilder.Entity("Erp.Modules.Warehouse.Domain.Commands.CommandLogEntry", b =>
+                {
+                    b.HasOne("Erp.Modules.Warehouse.Domain.StockDocuments.StockDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_command_log_stock_documents_document_id");
                 });
 
             modelBuilder.Entity("Erp.Modules.Warehouse.Domain.Stock.Lot", b =>

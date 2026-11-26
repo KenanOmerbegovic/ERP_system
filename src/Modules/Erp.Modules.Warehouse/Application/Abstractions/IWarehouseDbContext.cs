@@ -1,4 +1,5 @@
 using Erp.Modules.Warehouse.Domain.Articles;
+using Erp.Modules.Warehouse.Domain.Commands;
 using Erp.Modules.Warehouse.Domain.Numbering;
 using Erp.Modules.Warehouse.Domain.Stock;
 using Erp.Modules.Warehouse.Domain.StockDocuments;
@@ -31,6 +32,8 @@ public interface IWarehouseDbContext
 
     DbSet<NumberSeries> NumberSeries { get; }
 
+    DbSet<CommandLogEntry> CommandLog { get; }
+
     /// <summary>Queues the event in Warehouse's outbox; it is saved by the next <see cref="SaveChangesAsync"/>.</summary>
     void AddIntegrationEvent(IIntegrationEvent integrationEvent);
 
@@ -47,6 +50,12 @@ public interface IWarehouseDbContext
 /// </summary>
 public interface IStockLocks
 {
+    /// <summary>
+    /// Creates the command log entry for the key if missing (not completed) and locks it. A concurrent command with the
+    /// same key waits here until the first one commits or rolls back. Locked first, before the document and stock.
+    /// </summary>
+    Task ClaimCommandAsync(CompanyId companyId, string sourceModule, Guid sourceDocumentId, string action, CancellationToken cancellationToken);
+
     /// <summary>Locks the document; false if the company has no such document.</summary>
     Task<bool> LockDocumentAsync(CompanyId companyId, Guid documentId, CancellationToken cancellationToken);
 

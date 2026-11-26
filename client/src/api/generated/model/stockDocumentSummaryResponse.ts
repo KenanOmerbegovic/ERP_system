@@ -29,4 +29,6 @@ export interface StockDocumentSummaryResponse {
      * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
      */
   totalValue: number | string | null;
+  /** @nullable */
+  sourceModule: string | null;
 }

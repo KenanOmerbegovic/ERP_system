@@ -13,7 +13,8 @@ public sealed record ArticleCreated(
     ArticleKind Kind,
     ArticleTracking Tracking,
     Guid UnitOfMeasureId,
-    bool IsActive) : IIntegrationEvent;
+    bool IsActive,
+    string? DefaultVatCode = null) : IIntegrationEvent;
 
 /// <summary>An article's data changed; it carries the full current state. <see cref="Tracking"/> never changes.</summary>
 public sealed record ArticleUpdated(
@@ -26,4 +27,5 @@ public sealed record ArticleUpdated(
     ArticleKind Kind,
     ArticleTracking Tracking,
     Guid UnitOfMeasureId,
-    bool IsActive) : IIntegrationEvent;
+    bool IsActive,
+    string? DefaultVatCode = null) : IIntegrationEvent;

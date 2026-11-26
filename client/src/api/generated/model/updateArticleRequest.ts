@@ -11,5 +11,7 @@ export interface UpdateArticleRequest {
   name: string;
   type: ArticleKind;
   unitOfMeasureId: string;
+  /** @nullable */
+  defaultVatCode: string | null;
   isActive: boolean;
 }

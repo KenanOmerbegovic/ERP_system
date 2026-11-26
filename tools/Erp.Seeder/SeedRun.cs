@@ -62,7 +62,8 @@ internal static class SeedRun
         await output.WriteLineAsync(
             $"Seeded {data.Company.Name} (JIB {data.Company.TaxId}, size {size.ToString().ToLowerInvariant()}): " +
             $"{data.Partners.Count} business partners, {data.Articles.Count} articles, {data.Units.Count} units of measure, " +
-            $"{data.Warehouses.Count} warehouses with opening stock ({data.OpeningReceipts.Count} receipts). Self-checks passed.");
+            $"{data.Warehouses.Count} warehouses with opening stock ({data.OpeningReceipts.Count} receipts), " +
+            $"{data.PurchaseOrders.Count} purchase orders with their receipts and supplier invoices. Self-checks passed.");
         await output.WriteLineAsync("Users (password as given):");
         await output.WriteLineAsync($"  {data.Administrator.Email,-40} Administrator");
         foreach (var role in data.Roles)

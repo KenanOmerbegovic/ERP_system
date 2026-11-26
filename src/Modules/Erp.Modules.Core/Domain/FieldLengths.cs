@@ -13,4 +13,5 @@ public static class FieldLengths
     public const int CountryCode = 2;
     public const int UnitCode = 10;
     public const int UnitName = 50;
+    public const int VatCode = 20;
 }

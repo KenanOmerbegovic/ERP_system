@@ -51,6 +51,16 @@ public sealed class StockDocument : AggregateRoot<Guid>
     /// <summary>Set on a confirmed document once it is reversed. The only change a confirmed document accepts.</summary>
     public Guid? ReversedByDocumentId { get; private set; }
 
+    /// <summary>
+    /// The module whose document this stock document belongs to (e.g. "purchasing"), when it was created through the
+    /// Warehouse command contract; null for documents made in Warehouse. Only the owning module reverses it.
+    /// </summary>
+    public string? SourceModule { get; private set; }
+
+    public Guid? SourceDocumentId { get; private set; }
+
+    public bool IsOwnedByAnotherModule => SourceModule is not null;
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset? ConfirmedAt { get; private set; }
@@ -136,6 +146,14 @@ public sealed class StockDocument : AggregateRoot<Guid>
 
         ReversedByDocumentId = storno.Id;
         return storno;
+    }
+
+    /// <summary>Marks a draft as created for another module's document.</summary>
+    public void AssignSource(string sourceModule, Guid sourceDocumentId)
+    {
+        EnsureDraft();
+        SourceModule = Text.Required(sourceModule);
+        SourceDocumentId = sourceDocumentId;
     }
 
     private void SetContent(

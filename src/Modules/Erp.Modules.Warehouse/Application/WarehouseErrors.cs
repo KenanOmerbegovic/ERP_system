@@ -26,6 +26,9 @@ public static class WarehouseErrors
     public static readonly Error StockDocumentAlreadyReversed =
         Error.Conflict("StockDocument.AlreadyReversed", "The document is already reversed.");
 
+    public static readonly Error StockDocumentOwnedByAnotherModule =
+        Error.Conflict("StockDocument.OwnedByAnotherModule", "The document belongs to another module's document; reverse it there.");
+
     public static readonly Error NumberSeriesNotConfigured =
         new("NumberSeries.NotConfigured", "No number series is configured for this document type and date.");
 
@@ -50,11 +53,4 @@ public static class WarehouseValidationCodes
     public const string SerialNumberCountMismatch = "StockLine.SerialNumberCountMismatch";
     public const string SerialNumberDuplicate = "StockLine.SerialNumberDuplicate";
     public const string NotAllowed = "Field.NotAllowed";
-}
-
-/// <summary>Stock.Insufficient (409): the document would take more than is in stock. Nothing was saved.</summary>
-public sealed record InsufficientStockError(IReadOnlyList<StockShortageResponse> Shortages)
-    : Error(ErrorCode, "Not enough stock.", ErrorType.Conflict)
-{
-    public const string ErrorCode = "Stock.Insufficient";
 }

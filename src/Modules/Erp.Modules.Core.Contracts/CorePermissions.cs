@@ -11,6 +11,8 @@ public static class CorePermissions
     public const string UnitsOfMeasureWrite = "core.units-of-measure.write";
     public const string ArticlesRead = "core.articles.read";
     public const string ArticlesWrite = "core.articles.write";
+    public const string VatRatesRead = "core.vat-rates.read";
+    public const string VatRatesWrite = "core.vat-rates.write";
 
     public static IReadOnlyList<string> All { get; } =
     [
@@ -22,5 +24,7 @@ public static class CorePermissions
         UnitsOfMeasureWrite,
         ArticlesRead,
         ArticlesWrite,
+        VatRatesRead,
+        VatRatesWrite,
     ];
 }

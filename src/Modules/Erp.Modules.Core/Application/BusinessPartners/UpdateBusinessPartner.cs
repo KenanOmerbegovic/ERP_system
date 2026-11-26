@@ -2,6 +2,7 @@ using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Application.Common;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Results;
+using Erp.SharedKernel.Time;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,8 @@ internal sealed class UpdateBusinessPartnerValidator : AbstractValidator<UpdateB
 public sealed class UpdateBusinessPartnerHandler(
     ICoreDbContext db,
     IValidator<UpdateBusinessPartner> validator,
-    ITaxIdentifierRules taxRules)
+    ITaxIdentifierRules taxRules,
+    IClock clock)
 {
     public async Task<Result> HandleAsync(UpdateBusinessPartner command, CancellationToken cancellationToken)
     {
@@ -60,6 +62,7 @@ public sealed class UpdateBusinessPartnerHandler(
         }
 
         partner.Update(command.ToDetails(taxRules));
+        db.AddIntegrationEvent(partner.ToUpdatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }

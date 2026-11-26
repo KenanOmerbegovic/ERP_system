@@ -29,7 +29,7 @@ public sealed class ArticleTests : IDisposable
         var unitId = await _handlers.AUnitAsync(companyId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, " A001 ", "Vijak M8", ArticleType.Goods, TrackingType.None, unitId, IsActive: true),
+            new CreateArticle(companyId, " A001 ", "Vijak M8", ArticleType.Goods, TrackingType.None, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -49,7 +49,7 @@ public sealed class ArticleTests : IDisposable
         var foreignUnitId = await _handlers.AUnitAsync(otherId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Vijak", ArticleType.Goods, TrackingType.None, foreignUnitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Vijak", ArticleType.Goods, TrackingType.None, foreignUnitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.ArticleUnitOfMeasureNotFound);
@@ -61,7 +61,7 @@ public sealed class ArticleTests : IDisposable
         var companyId = await _handlers.ACompanyAsync();
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "", "", (ArticleType)99, TrackingType.None, Guid.Empty, IsActive: true),
+            new CreateArticle(companyId, "", "", (ArticleType)99, TrackingType.None, Guid.Empty, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.FailsValidation(result, "Code", "NotEmptyValidator");
@@ -74,7 +74,7 @@ public sealed class ArticleTests : IDisposable
     public async Task Create_in_unknown_company_is_not_found()
     {
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(CompanyId.New(), "A001", "Vijak", ArticleType.Goods, TrackingType.None, Guid.NewGuid(), IsActive: true),
+            new CreateArticle(CompanyId.New(), "A001", "Vijak", ArticleType.Goods, TrackingType.None, Guid.NewGuid(), DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.CompanyNotFound);
@@ -88,7 +88,7 @@ public sealed class ArticleTests : IDisposable
         await _handlers.AnArticleAsync(companyId, unitId, code: "A001");
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Drugi", ArticleType.Service, TrackingType.None, unitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Drugi", ArticleType.Service, TrackingType.None, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.DuplicateArticleCode);
@@ -103,7 +103,7 @@ public sealed class ArticleTests : IDisposable
         var articleId = await _handlers.AnArticleAsync(companyId, komId);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, articleId, "U001", "Montaža", ArticleType.Service, hId, IsActive: false),
+            new UpdateArticle(companyId, articleId, "U001", "Montaža", ArticleType.Service, hId, DefaultVatCode: null, IsActive: false),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -125,7 +125,7 @@ public sealed class ArticleTests : IDisposable
         var articleId = await _handlers.AnArticleAsync(companyId, unitId);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, articleId, "A001", "Artikal", ArticleType.Goods, foreignUnitId, IsActive: true),
+            new UpdateArticle(companyId, articleId, "A001", "Artikal", ArticleType.Goods, foreignUnitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.ArticleUnitOfMeasureNotFound);
@@ -140,7 +140,7 @@ public sealed class ArticleTests : IDisposable
         var secondId = await _handlers.AnArticleAsync(companyId, unitId, code: "A002");
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, secondId, "A001", "Artikal", ArticleType.Goods, unitId, IsActive: true),
+            new UpdateArticle(companyId, secondId, "A001", "Artikal", ArticleType.Goods, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.DuplicateArticleCode);
@@ -156,7 +156,7 @@ public sealed class ArticleTests : IDisposable
         var articleId = await _handlers.AnArticleAsync(owner, ownerUnit);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(other, articleId, "A001", "Artikal", ArticleType.Goods, otherUnit, IsActive: true),
+            new UpdateArticle(other, articleId, "A001", "Artikal", ArticleType.Goods, otherUnit, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.ArticleNotFound);
@@ -170,7 +170,7 @@ public sealed class ArticleTests : IDisposable
         var articleId = await _handlers.AnArticleAsync(companyId, unitId);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, articleId, "A001", new string('x', 201), ArticleType.Goods, unitId, IsActive: true),
+            new UpdateArticle(companyId, articleId, "A001", new string('x', 201), ArticleType.Goods, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.FailsValidation(result, "Name", "MaximumLengthValidator");
@@ -215,7 +215,7 @@ public sealed class ArticleTests : IDisposable
         var unitId = await _handlers.AUnitAsync(companyId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Laptop", ArticleType.Goods, TrackingType.Serial, unitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Laptop", ArticleType.Goods, TrackingType.Serial, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -237,7 +237,7 @@ public sealed class ArticleTests : IDisposable
         var unitId = await _handlers.AUnitAsync(companyId);
 
         var result = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "U001", "Montaža", ArticleType.Service, tracking, unitId, IsActive: true),
+            new CreateArticle(companyId, "U001", "Montaža", ArticleType.Service, tracking, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.FailsValidation(result, "TrackingType", CoreErrors.ServiceCannotBeTracked.Code);
@@ -249,11 +249,11 @@ public sealed class ArticleTests : IDisposable
         var companyId = await _handlers.ACompanyAsync();
         var unitId = await _handlers.AUnitAsync(companyId);
         var created = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, created.Value, "A001", "Brašno T-500", ArticleType.Goods, unitId, IsActive: false),
+            new UpdateArticle(companyId, created.Value, "A001", "Brašno T-500", ArticleType.Goods, unitId, DefaultVatCode: null, IsActive: false),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -270,11 +270,11 @@ public sealed class ArticleTests : IDisposable
         var companyId = await _handlers.ACompanyAsync();
         var unitId = await _handlers.AUnitAsync(companyId);
         var created = await _handlers.CreateArticle.HandleAsync(
-            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, IsActive: true),
+            new CreateArticle(companyId, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         var result = await _handlers.UpdateArticle.HandleAsync(
-            new UpdateArticle(companyId, created.Value, "A001", "Brašno", ArticleType.Service, unitId, IsActive: true),
+            new UpdateArticle(companyId, created.Value, "A001", "Brašno", ArticleType.Service, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
 
         ResultAssert.Fails(result, CoreErrors.ServiceCannotBeTracked);

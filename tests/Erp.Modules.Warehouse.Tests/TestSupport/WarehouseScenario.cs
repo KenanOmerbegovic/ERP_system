@@ -1,5 +1,6 @@
 using Erp.Modules.Core.Contracts.Articles;
 using Erp.Modules.Warehouse.Application.Articles;
+using Erp.Modules.Warehouse.Application.Commands;
 using Erp.Modules.Warehouse.Application.Numbering;
 using Erp.Modules.Warehouse.Application.Stock;
 using Erp.Modules.Warehouse.Application.StockDocuments;
@@ -57,6 +58,8 @@ internal sealed class WarehouseHandlers(WarehouseDbContext db, IClock clock)
     public ListStockBalancesHandler ListStockBalances => new(db, new ListStockBalancesValidator());
 
     public ListSerialNumbersHandler ListSerialNumbers => new(db, new ListSerialNumbersValidator());
+
+    public StockDocumentCommands Commands => new(db, new StockLocks(db), clock, new CreateStockDocumentValidator(clock));
 }
 
 /// <summary>

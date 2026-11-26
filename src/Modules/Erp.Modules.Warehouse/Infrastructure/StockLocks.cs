@@ -12,6 +12,26 @@ namespace Erp.Modules.Warehouse.Infrastructure;
 /// </summary>
 internal sealed class StockLocks(WarehouseDbContext db) : IStockLocks
 {
+    public async Task ClaimCommandAsync(
+        CompanyId companyId, string sourceModule, Guid sourceDocumentId, string action, CancellationToken cancellationToken)
+    {
+        EnsureTransaction();
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO warehouse.command_log (id, company_id, source_module, source_document_id, action)
+            VALUES ({Guid.CreateVersion7()}, {companyId.Value}, {sourceModule}, {sourceDocumentId}, {action})
+            ON CONFLICT (company_id, source_module, source_document_id, action) DO NOTHING
+            """,
+            cancellationToken);
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            SELECT 1 FROM warehouse.command_log
+            WHERE company_id = {companyId.Value} AND source_module = {sourceModule} AND source_document_id = {sourceDocumentId} AND action = {action}
+            FOR UPDATE
+            """,
+            cancellationToken);
+    }
+
     public async Task<bool> LockDocumentAsync(CompanyId companyId, Guid documentId, CancellationToken cancellationToken)
     {
         EnsureTransaction();

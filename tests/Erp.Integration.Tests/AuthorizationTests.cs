@@ -80,7 +80,7 @@ public sealed class AuthorizationTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync($"/api/companies/{companyId}/articles")).StatusCode);
         var write = await viewer.PostJsonAsync(
             $"/api/companies/{companyId}/articles",
-            new CreateArticleRequest("A1", "Artikal", ArticleKind.Goods, ArticleTracking.None, Guid.NewGuid(), true));
+            new CreateArticleRequest("A1", "Artikal", ArticleKind.Goods, ArticleTracking.None, Guid.NewGuid(), null, true));
         Assert.Equal(HttpStatusCode.Forbidden, write.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync($"/api/companies/{companyId}/users")).StatusCode);
 

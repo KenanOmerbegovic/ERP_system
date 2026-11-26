@@ -1,3 +1,4 @@
+using Erp.Modules.Warehouse.Contracts.StockDocuments;
 using Erp.Modules.Core.Contracts.Articles;
 using Erp.Modules.Warehouse.Application;
 using Erp.Modules.Warehouse.Application.Stock;

@@ -21,9 +21,9 @@ internal sealed class CoreHandlers(CoreDbContext db)
 
     public GetCompanyHandler GetCompany { get; } = new(db);
 
-    public CreateBusinessPartnerHandler CreateBusinessPartner { get; } = new(db, new CreateBusinessPartnerValidator(TaxRules), TaxRules);
+    public CreateBusinessPartnerHandler CreateBusinessPartner => new(db, new CreateBusinessPartnerValidator(TaxRules), TaxRules, Clock);
 
-    public UpdateBusinessPartnerHandler UpdateBusinessPartner { get; } = new(db, new UpdateBusinessPartnerValidator(TaxRules), TaxRules);
+    public UpdateBusinessPartnerHandler UpdateBusinessPartner => new(db, new UpdateBusinessPartnerValidator(TaxRules), TaxRules, Clock);
 
     public ListBusinessPartnersHandler ListBusinessPartners { get; } = new(db, new ListBusinessPartnersValidator());
 
@@ -62,7 +62,7 @@ internal sealed class CoreHandlers(CoreDbContext db)
     public async Task<Guid> AnArticleAsync(CompanyId companyId, Guid unitId, string code = "A001", string name = "Artikal")
     {
         var result = await CreateArticle.HandleAsync(
-            new CreateArticle(companyId, code, name, ArticleType.Goods, TrackingType.None, unitId, IsActive: true),
+            new CreateArticle(companyId, code, name, ArticleType.Goods, TrackingType.None, unitId, DefaultVatCode: null, IsActive: true),
             CancellationToken.None);
         return result.Value;
     }

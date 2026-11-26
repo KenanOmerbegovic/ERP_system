@@ -2,6 +2,8 @@ using Erp.Messaging;
 using Erp.Modules.Core.Contracts.Articles;
 using Erp.Modules.Warehouse.Application.Abstractions;
 using Erp.Modules.Warehouse.Application.Articles;
+using Erp.Modules.Warehouse.Application.Commands;
+using Erp.Modules.Warehouse.Contracts.Commands;
 using Erp.Modules.Warehouse.Endpoints;
 using Erp.Modules.Warehouse.Infrastructure;
 using FluentValidation;
@@ -15,7 +17,8 @@ namespace Erp.Modules.Warehouse;
 /// <summary>
 /// Composition entry points for the host. The host must also register an <see cref="SharedKernel.Time.IClock"/>,
 /// the Identity module (which authorizes Warehouse's endpoints, with <see cref="Contracts.WarehousePermissions"/>),
-/// and the Core module, whose article events Warehouse keeps its copy of articles from.
+/// and the Core module, whose article events Warehouse keeps its copy of articles from. Other modules move stock
+/// through <see cref="IStockDocumentCommands"/>.
 /// </summary>
 public static class WarehouseModule
 {
@@ -31,6 +34,7 @@ public static class WarehouseModule
             .UseSnakeCaseNamingConvention());
         services.AddScoped<IWarehouseDbContext>(provider => provider.GetRequiredService<WarehouseDbContext>());
         services.AddScoped<IStockLocks, StockLocks>();
+        services.AddScoped<IStockDocumentCommands, StockDocumentCommands>();
         services.AddOutboxProcessor<WarehouseDbContext>();
 
         services.AddValidatorsFromAssembly(typeof(WarehouseModule).Assembly, includeInternalTypes: true);

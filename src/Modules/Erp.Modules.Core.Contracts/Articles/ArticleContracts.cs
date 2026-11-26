@@ -7,6 +7,7 @@ public sealed record CreateArticleRequest(
     ArticleKind Type,
     ArticleTracking Tracking,
     Guid UnitOfMeasureId,
+    string? DefaultVatCode,
     bool IsActive);
 
 /// <summary>Body of update requests; the tracking type cannot change.</summary>
@@ -15,6 +16,7 @@ public sealed record UpdateArticleRequest(
     string Name,
     ArticleKind Type,
     Guid UnitOfMeasureId,
+    string? DefaultVatCode,
     bool IsActive);
 
 public sealed record ArticleResponse(
@@ -24,6 +26,7 @@ public sealed record ArticleResponse(
     ArticleKind Type,
     ArticleTracking Tracking,
     Guid UnitOfMeasureId,
+    string? DefaultVatCode,
     bool IsActive);
 
 public enum ArticleKind

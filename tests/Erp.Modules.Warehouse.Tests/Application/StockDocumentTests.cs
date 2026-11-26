@@ -1,3 +1,4 @@
+using Erp.Modules.Warehouse.Contracts.StockDocuments;
 using System.Text.Json;
 using Erp.Messaging.Outbox;
 using Erp.Modules.Core.Contracts.Articles;

@@ -3,6 +3,8 @@ using System.Text;
 using Bogus;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Core.Domain.Articles;
+using Erp.Modules.Purchasing.Contracts;
+using Erp.Modules.Purchasing.Domain.Numbering;
 using Erp.Modules.Warehouse.Contracts;
 using Erp.Modules.Warehouse.Domain.StockDocuments;
 
@@ -18,6 +20,9 @@ internal static class SeedDataGenerator
 
     /// <summary>Every generated email address uses this reserved TLD.</summary>
     public const string ReservedTopLevelDomain = ".test";
+
+    /// <summary>Every seeded article is taxed at the standard rate.</summary>
+    public const string StandardVatCode = "PDV17";
 
     /// <summary>Lines per opening receipt; larger warehouses get several.</summary>
     public const int MaxReceiptLines = 200;
@@ -45,7 +50,9 @@ internal static class SeedDataGenerator
         var articles = Articles(random, profile.Articles);
         var warehouses = Warehouses(random, profile.Warehouses);
         var receipts = OpeningReceipts(random, warehouses, articles);
-        return new SeedData(company, administrator, roles, units, partners, articles, warehouses, NumberSeries(), receipts);
+        var orders = PurchaseOrders(random, partners, articles, profile.PurchaseOrders);
+        return new SeedData(
+            company, administrator, roles, units, partners, articles, warehouses, NumberSeries(), receipts, VatRates(), PurchasingNumberSeries(), orders);
     }
 
     /// <summary>BiH JIB: 13 digits, legal entities start with 4. The PDV number is the JIB without that leading 4.</summary>
@@ -70,8 +77,10 @@ internal static class SeedDataGenerator
         new("Knjigovođa",
             [
                 CorePermissions.CompaniesRead, CorePermissions.BusinessPartnersRead, CorePermissions.BusinessPartnersWrite,
-                CorePermissions.UnitsOfMeasureRead, CorePermissions.ArticlesRead,
+                CorePermissions.UnitsOfMeasureRead, CorePermissions.ArticlesRead, CorePermissions.VatRatesRead,
                 WarehousePermissions.WarehousesRead, WarehousePermissions.StockDocumentsRead, WarehousePermissions.StockRead,
+                PurchasingPermissions.OrdersRead, PurchasingPermissions.ReceiptsRead, PurchasingPermissions.InvoicesRead,
+                PurchasingPermissions.InvoicesWrite, PurchasingPermissions.InvoicesConfirm,
             ],
             Person(random, domain, emails)),
         new("Komercijalista",
@@ -86,6 +95,18 @@ internal static class SeedDataGenerator
                 CorePermissions.UnitsOfMeasureWrite, CorePermissions.ArticlesRead, CorePermissions.ArticlesWrite,
                 WarehousePermissions.WarehousesRead, WarehousePermissions.WarehousesWrite, WarehousePermissions.StockDocumentsRead,
                 WarehousePermissions.StockDocumentsWrite, WarehousePermissions.StockDocumentsConfirm, WarehousePermissions.StockRead,
+                PurchasingPermissions.OrdersRead, PurchasingPermissions.ReceiptsRead, PurchasingPermissions.ReceiptsWrite,
+                PurchasingPermissions.ReceiptsConfirm,
+            ],
+            Person(random, domain, emails)),
+        new("Nabavljač",
+            [
+                CorePermissions.CompaniesRead, CorePermissions.BusinessPartnersRead, CorePermissions.BusinessPartnersWrite,
+                CorePermissions.UnitsOfMeasureRead, CorePermissions.ArticlesRead, CorePermissions.VatRatesRead,
+                WarehousePermissions.WarehousesRead, WarehousePermissions.StockRead,
+                PurchasingPermissions.OrdersRead, PurchasingPermissions.OrdersWrite, PurchasingPermissions.OrdersConfirm,
+                PurchasingPermissions.ReceiptsRead, PurchasingPermissions.ReceiptsWrite, PurchasingPermissions.ReceiptsConfirm,
+                PurchasingPermissions.InvoicesRead, PurchasingPermissions.InvoicesWrite,
             ],
             Person(random, domain, emails)),
     ];
@@ -159,7 +180,7 @@ internal static class SeedDataGenerator
         var chosen = random.Shuffle(goods).Take(count - serviceCount)
             .Concat(random.Shuffle(services).Take(serviceCount));
         return random.Shuffle(chosen)
-            .Select((article, index) => new ArticleSeed($"A{index + 1:D5}", article.Name, article.Type, article.Tracking, article.UnitCode, random.Bool(0.97f)))
+            .Select((article, index) => new ArticleSeed($"A{index + 1:D5}", article.Name, article.Type, article.Tracking, article.UnitCode, random.Bool(0.97f), StandardVatCode))
             .ToList();
     }
 
@@ -236,6 +257,52 @@ internal static class SeedDataGenerator
         "t" or "m3" => Math.Round(random.Decimal(1m, 20m), 2),
         _ => Math.Round(random.Decimal(10m, 500m), 1),
     };
+
+    /// <summary>The BiH standard rate and exempt supplies, valid long before any seeded document.</summary>
+    private static List<VatRateSeed> VatRates() =>
+    [
+        new(StandardVatCode, "Opća stopa PDV-a", 0.17m, new DateOnly(2006, 1, 1)),
+        new("OSL", "Oslobođeno PDV-a", 0m, new DateOnly(2006, 1, 1)),
+    ];
+
+    private static List<PurchasingNumberSeriesSeed> PurchasingNumberSeries() =>
+    [
+        new(PurchasingDocumentType.PurchaseOrder, OpeningDate, "NAR-", 5),
+        new(PurchasingDocumentType.GoodsReceipt, OpeningDate, "PRI-", 5),
+        new(PurchasingDocumentType.SupplierInvoice, OpeningDate, "ULF-", 5),
+    ];
+
+    /// <summary>
+    /// Orders to active suppliers for active goods that are not serial tracked, one every week from the opening date.
+    /// In turn: fully received and invoiced, partly received, not received yet; the first invoice charges 5 % more on
+    /// its first line, so there is a price difference for Finance.
+    /// </summary>
+    private static List<PurchaseOrderSeed> PurchaseOrders(Randomizer random, IReadOnlyList<PartnerSeed> partners, IReadOnlyList<ArticleSeed> articles, int count)
+    {
+        var suppliers = partners.Where(p => p is { IsSupplier: true, IsActive: true }).ToList();
+        var goods = articles.Where(a => a is { Type: ArticleType.Goods, IsActive: true } && a.Tracking != TrackingType.Serial).ToList();
+        var orders = new List<PurchaseOrderSeed>();
+        for (var index = 0; index < count && suppliers.Count > 0 && goods.Count > 0; index++)
+        {
+            var lines = random.Shuffle(goods).Take(random.Int(2, 4))
+                .Select((article, line) => new PurchaseOrderLineSeed(
+                    article.Code,
+                    article.UnitCode is "kom" or "pak" ? random.Int(10, 100) : Math.Round(random.Decimal(10m, 200m), 1),
+                    Math.Round(random.Decimal(0.5m, 100m), 2),
+                    article.Tracking == TrackingType.Lot ? $"N{index + 1:D3}-{line + 1}" : null))
+                .ToList();
+            var share = (index % 3) switch { 0 => 1m, 1 => 0.5m, _ => 0m };
+            orders.Add(new PurchaseOrderSeed(
+                random.ArrayElement(suppliers.ToArray()).Code,
+                OpeningDate.AddDays(14 + (7 * index)),
+                lines,
+                share,
+                share == 1m ? $"F-{OpeningDate.Year}-{index + 1:D4}" : null,
+                index == 0 ? 1.05m : 1m));
+        }
+
+        return orders;
+    }
 
     private static string TaxId(Randomizer random, HashSet<string> taxIds) =>
         Unique(taxIds, () => "4" + random.ReplaceNumbers("############"), "tax ids");

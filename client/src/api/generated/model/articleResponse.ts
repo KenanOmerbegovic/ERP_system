@@ -14,5 +14,7 @@ export interface ArticleResponse {
   type: ArticleKind;
   tracking: ArticleTracking;
   unitOfMeasureId: string;
+  /** @nullable */
+  defaultVatCode: string | null;
   isActive: boolean;
 }

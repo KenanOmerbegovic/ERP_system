@@ -84,6 +84,11 @@ namespace Erp.Modules.Core.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("company_id");
 
+                    b.Property<string>("DefaultVatCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("default_vat_code");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -288,6 +293,51 @@ namespace Erp.Modules.Core.Infrastructure.Migrations
                     b.ToTable("units_of_measure", "core");
                 });
 
+            modelBuilder.Entity("Erp.Modules.Core.Domain.Vat.VatRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasColumnName("rate");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.HasKey("Id")
+                        .HasName("pk_vat_rates");
+
+                    b.HasIndex("CompanyId", "Code", "ValidFrom")
+                        .IsUnique()
+                        .HasDatabaseName("ix_vat_rates_company_id_code_valid_from");
+
+                    b.ToTable("vat_rates", "core", t =>
+                        {
+                            t.HasCheckConstraint("ck_vat_rates_rate", "rate >= 0 AND rate <= 1");
+                        });
+                });
+
             modelBuilder.Entity("Erp.Modules.Core.Domain.Articles.Article", b =>
                 {
                     b.HasOne("Erp.Modules.Core.Domain.Companies.Company", null)
@@ -323,6 +373,16 @@ namespace Erp.Modules.Core.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_units_of_measure_companies_company_id");
+                });
+
+            modelBuilder.Entity("Erp.Modules.Core.Domain.Vat.VatRate", b =>
+                {
+                    b.HasOne("Erp.Modules.Core.Domain.Companies.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_vat_rates_companies_company_id");
                 });
 #pragma warning restore 612, 618
         }
