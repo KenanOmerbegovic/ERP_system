@@ -16,6 +16,7 @@ public sealed record UpdateArticle(
     string Name,
     ArticleType Type,
     Guid UnitOfMeasureId,
+    string? DefaultVatCode,
     bool IsActive) : IArticleFields;
 
 internal sealed class UpdateArticleValidator : AbstractValidator<UpdateArticle>
@@ -56,6 +57,11 @@ public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArt
             return CoreErrors.ArticleUnitOfMeasureNotFound;
         }
 
+        if (!await db.VatCodeExistsAsync(command.CompanyId, command.DefaultVatCode, cancellationToken))
+        {
+            return CoreErrors.ArticleVatCodeNotFound;
+        }
+
         var code = command.Code.Trim();
         if (await db.Articles.AnyAsync(
                 a => a.CompanyId == command.CompanyId && a.Code == code && a.Id != command.ArticleId,
@@ -64,7 +70,7 @@ public sealed class UpdateArticleHandler(ICoreDbContext db, IValidator<UpdateArt
             return CoreErrors.DuplicateArticleCode;
         }
 
-        article.Update(code, command.Name, command.Type, command.UnitOfMeasureId, command.IsActive);
+        article.Update(code, command.Name, command.Type, command.UnitOfMeasureId, command.DefaultVatCode, command.IsActive);
         db.AddIntegrationEvent(article.ToUpdatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);
         return Result.Success();

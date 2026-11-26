@@ -1,10 +1,14 @@
 using System.Security.Cryptography;
 using Erp.Localization.BiH;
 using Erp.Localization.BiH.Core;
+using Erp.Localization.BiH.Vat;
+using Erp.Modules.Core.Contracts.Vat;
 using Erp.Modules.Core;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
+using Erp.Modules.Purchasing;
+using Erp.Modules.Purchasing.Contracts;
 using Erp.Modules.Warehouse;
 using Erp.Modules.Warehouse.Contracts;
 using Erp.SharedKernel.Time;
@@ -35,9 +39,11 @@ internal static class SeederHost
 
         builder.Services.AddSingleton<IClock>(new SystemClock(BiHLocale.TimeZone));
         builder.Services.AddSingleton<ITaxIdentifierRules, BiHTaxIdentifierRules>();
-        builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All]);
+        builder.Services.AddScoped<IVatCalculator, BiHVatCalculator>();
+        builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All, .. PurchasingPermissions.All]);
         builder.Services.AddCoreModule(builder.Configuration);
         builder.Services.AddWarehouseModule(builder.Configuration);
+        builder.Services.AddPurchasingModule(builder.Configuration);
         return builder.Build();
     }
 }

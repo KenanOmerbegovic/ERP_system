@@ -56,4 +56,24 @@ public sealed class WarehouseSeedTests
         Assert.Equal(Enum.GetValues<StockDocumentType>(), data.NumberSeries.Select(s => s.DocumentType).Order());
         Assert.All(data.NumberSeries, series => Assert.Equal(SeedDataGenerator.OpeningDate, series.ValidFrom));
     }
+
+    [Fact]
+    public void FR_PUR_01_purchase_orders_go_to_active_suppliers_for_orderable_goods()
+    {
+        var data = SeedDataGenerator.Generate(SeedProfile.For(SeedSize.Small));
+        var suppliers = data.Partners.Where(p => p is { IsSupplier: true, IsActive: true }).Select(p => p.Code).ToHashSet();
+        var articles = data.Articles.ToDictionary(a => a.Code);
+
+        Assert.All(data.PurchaseOrders, order => Assert.Contains(order.SupplierCode, suppliers));
+        Assert.All(data.PurchaseOrders.SelectMany(o => o.Lines), line =>
+        {
+            var article = articles[line.ArticleCode];
+            Assert.True(article is { Type: ArticleType.Goods, IsActive: true } && article.Tracking != TrackingType.Serial, line.ArticleCode);
+            Assert.Equal(article.Tracking == TrackingType.Lot, line.LotNumber is not null);
+        });
+        Assert.Contains(data.PurchaseOrders, order => order.ReceivedShare == 0.5m);
+        Assert.Contains(data.PurchaseOrders, order => order.SupplierInvoiceNumber is not null && order.InvoicePriceFactor != 1m);
+        Assert.All(data.PurchaseOrders, order => Assert.True(order.OrderDate > SeedDataGenerator.OpeningDate));
+        Assert.All(data.Articles, article => Assert.Equal(SeedDataGenerator.StandardVatCode, article.DefaultVatCode));
+    }
 }

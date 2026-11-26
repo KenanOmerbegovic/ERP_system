@@ -50,29 +50,29 @@ public class CoreDomainTests
     public void Article_rejects_undefined_type()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            Article.Create(Tenant, "A001", "Vijak", (ArticleType)99, TrackingType.None, Guid.NewGuid(), isActive: true));
+            Article.Create(Tenant, "A001", "Vijak", (ArticleType)99, TrackingType.None, Guid.NewGuid(), defaultVatCode: null, isActive: true));
     }
 
     [Fact]
     public void Article_requires_unit_of_measure()
     {
         Assert.Throws<ArgumentException>(() =>
-            Article.Create(Tenant, "A001", "Vijak", ArticleType.Goods, TrackingType.None, Guid.Empty, isActive: true));
+            Article.Create(Tenant, "A001", "Vijak", ArticleType.Goods, TrackingType.None, Guid.Empty, defaultVatCode: null, isActive: true));
     }
 
     [Fact]
     public void Article_service_cannot_be_tracked()
     {
         Assert.Throws<ArgumentException>(() =>
-            Article.Create(Tenant, "U001", "Montaža", ArticleType.Service, TrackingType.Lot, Guid.NewGuid(), isActive: true));
+            Article.Create(Tenant, "U001", "Montaža", ArticleType.Service, TrackingType.Lot, Guid.NewGuid(), defaultVatCode: null, isActive: true));
     }
 
     [Fact]
     public void Article_tracked_goods_cannot_become_service()
     {
-        var article = Article.Create(Tenant, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, Guid.NewGuid(), isActive: true);
+        var article = Article.Create(Tenant, "A001", "Brašno", ArticleType.Goods, TrackingType.Lot, Guid.NewGuid(), defaultVatCode: null, isActive: true);
 
-        Assert.Throws<ArgumentException>(() => article.Update("A001", "Brašno", ArticleType.Service, article.UnitOfMeasureId, isActive: true));
+        Assert.Throws<ArgumentException>(() => article.Update("A001", "Brašno", ArticleType.Service, article.UnitOfMeasureId, defaultVatCode: null, isActive: true));
         Assert.Equal(TrackingType.Lot, article.TrackingType);
     }
 

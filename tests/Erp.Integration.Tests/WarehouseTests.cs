@@ -34,7 +34,7 @@ public sealed class WarehouseTests(ApiFactory factory)
 
         var unitId = await CreateAsync(admin, $"/api/companies/{companyId}/units-of-measure", new UnitOfMeasureRequest("kg", "Kilogram"));
         var articleId = await CreateAsync(admin, $"/api/companies/{companyId}/articles",
-            new CreateArticleRequest("BR-1", "Brašno T-500", ArticleKind.Goods, ArticleTracking.Lot, unitId, true));
+            new CreateArticleRequest("BR-1", "Brašno T-500", ArticleKind.Goods, ArticleTracking.Lot, unitId, null, true));
 
         // The article reaches Warehouse through Core's outbox moments later.
         var receipt = new StockDocumentRequest(StockDocumentKind.Receipt, today, null, warehouseId, null,

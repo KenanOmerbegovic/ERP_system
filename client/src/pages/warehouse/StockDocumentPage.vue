@@ -47,6 +47,7 @@
           !isDraft &&
           !document.reversesDocumentId &&
           !document.reversedByDocumentId &&
+          !document.sourceModule &&
           canConfirm
         "
         outline
@@ -66,6 +67,19 @@
       <q-banner v-if="isDraft" dense rounded class="bg-blue-1 q-mb-md">{{
         t('warehouse.document.draft')
       }}</q-banner>
+      <q-banner
+        v-if="document?.sourceModule === 'purchasing'"
+        dense
+        rounded
+        class="bg-blue-1 q-mb-md"
+      >
+        {{ t('warehouse.document.fromPurchasing') }}
+        <router-link
+          v-if="document.sourceDocumentId"
+          :to="{ name: 'goods-receipt', params: { id: document.sourceDocumentId } }"
+          >↗</router-link
+        >
+      </q-banner>
       <q-banner v-if="document?.reversesDocumentId" dense rounded class="bg-orange-1 q-mb-md">
         {{ t('warehouse.document.stornoOf') }}
         <router-link :to="{ name: 'stock-document', params: { id: document.reversesDocumentId } }"

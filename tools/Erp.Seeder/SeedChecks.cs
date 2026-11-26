@@ -55,6 +55,7 @@ internal static class SeedChecks
         }
 
         await StockChecks.RunAsync(provider, data, seeded, problems, cancellationToken);
+        await PurchasingChecks.RunAsync(provider, seeded, problems, cancellationToken);
         return problems;
     }
 

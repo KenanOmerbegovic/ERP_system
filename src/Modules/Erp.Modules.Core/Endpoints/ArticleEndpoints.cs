@@ -47,6 +47,7 @@ internal static class ArticleEndpoints
                     ToType(request.Type),
                     ToTracking(request.Tracking),
                     request.UnitOfMeasureId,
+                    request.DefaultVatCode,
                     request.IsActive),
                 cancellationToken)))
             .WithName("CreateArticle")
@@ -70,6 +71,7 @@ internal static class ArticleEndpoints
                     request.Name,
                     ToType(request.Type),
                     request.UnitOfMeasureId,
+                    request.DefaultVatCode,
                     request.IsActive),
                 cancellationToken)))
             .WithName("UpdateArticle")

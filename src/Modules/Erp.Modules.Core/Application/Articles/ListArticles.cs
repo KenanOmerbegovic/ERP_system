@@ -51,7 +51,7 @@ public sealed class ListArticlesHandler(ICoreDbContext db, IValidator<ListArticl
             .ToListAsync(cancellationToken);
 
         var items = page
-            .Select(a => new ArticleResponse(a.Id, a.Code, a.Name, a.Type.ToKind(), a.TrackingType.ToTracking(), a.UnitOfMeasureId, a.IsActive))
+            .Select(a => new ArticleResponse(a.Id, a.Code, a.Name, a.Type.ToKind(), a.TrackingType.ToTracking(), a.UnitOfMeasureId, a.DefaultVatCode, a.IsActive))
             .ToList();
         return new PagedResponse<ArticleResponse>(items, query.Page, query.PageSize, totalCount);
     }

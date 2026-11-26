@@ -95,6 +95,7 @@ public sealed class ListStockDocumentsHandler(IWarehouseDbContext db, IValidator
                 d.TargetStorehouseId,
                 d.ReversesDocumentId,
                 d.ReversedByDocumentId,
+                d.SourceModule,
                 LineCount = d.Lines.Count,
                 Value = d.Lines.Sum(line => line.Value),
             })
@@ -112,7 +113,8 @@ public sealed class ListStockDocumentsHandler(IWarehouseDbContext db, IValidator
                 d.ReversesDocumentId,
                 d.ReversedByDocumentId,
                 d.LineCount,
-                d.Status == StockDocumentStatus.Confirmed ? d.Value ?? 0m : null))
+                d.Status == StockDocumentStatus.Confirmed ? d.Value ?? 0m : null,
+                d.SourceModule))
             .ToList();
         return new PagedResponse<StockDocumentSummaryResponse>(items, query.Page, query.PageSize, totalCount);
     }

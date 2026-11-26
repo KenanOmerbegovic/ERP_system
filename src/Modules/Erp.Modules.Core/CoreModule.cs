@@ -1,5 +1,7 @@
 using Erp.Messaging;
 using Erp.Modules.Core.Application.Abstractions;
+using Erp.Modules.Core.Application.Vat;
+using Erp.Modules.Core.Contracts.Vat;
 using Erp.Modules.Core.Endpoints;
 using Erp.Modules.Core.Infrastructure;
 using FluentValidation;
@@ -29,6 +31,7 @@ public static class CoreModule
             .UseSnakeCaseNamingConvention());
         services.AddScoped<ICoreDbContext>(provider => provider.GetRequiredService<CoreDbContext>());
         services.AddOutboxProcessor<CoreDbContext>();
+        services.AddScoped<IVatRateLookup, VatRateLookup>();
 
         services.AddValidatorsFromAssembly(typeof(CoreModule).Assembly, includeInternalTypes: true);
 
@@ -50,6 +53,7 @@ public static class CoreModule
         app.MapBusinessPartnerEndpoints();
         app.MapUnitOfMeasureEndpoints();
         app.MapArticleEndpoints();
+        app.MapVatRateEndpoints();
         return app;
     }
 

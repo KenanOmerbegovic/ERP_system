@@ -4,10 +4,14 @@ using System.Text.Json.Serialization;
 using Erp.Api.OpenApi;
 using Erp.Localization.BiH;
 using Erp.Localization.BiH.Core;
+using Erp.Localization.BiH.Vat;
+using Erp.Modules.Core.Contracts.Vat;
 using Erp.Modules.Core;
 using Erp.Modules.Core.Application.Abstractions;
 using Erp.Modules.Core.Contracts;
 using Erp.Modules.Identity;
+using Erp.Modules.Purchasing;
+using Erp.Modules.Purchasing.Contracts;
 using Erp.Modules.Warehouse;
 using Erp.Modules.Warehouse.Contracts;
 using Erp.SharedKernel.Time;
@@ -46,9 +50,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
 
 builder.Services.AddSingleton<IClock>(new SystemClock(BiHLocale.TimeZone));
 builder.Services.AddSingleton<ITaxIdentifierRules, BiHTaxIdentifierRules>();
-builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All]);
+builder.Services.AddScoped<IVatCalculator, BiHVatCalculator>();
+builder.Services.AddIdentityModule(builder.Configuration, [.. CorePermissions.All, .. WarehousePermissions.All, .. PurchasingPermissions.All]);
 builder.Services.AddCoreModule(builder.Configuration);
 builder.Services.AddWarehouseModule(builder.Configuration);
+builder.Services.AddPurchasingModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -60,6 +66,7 @@ if (app.Environment.IsDevelopment())
     await app.Services.MigrateCoreDatabaseAsync(app.Lifetime.ApplicationStopping);
     await app.Services.MigrateIdentityDatabaseAsync(app.Lifetime.ApplicationStopping);
     await app.Services.MigrateWarehouseDatabaseAsync(app.Lifetime.ApplicationStopping);
+    await app.Services.MigratePurchasingDatabaseAsync(app.Lifetime.ApplicationStopping);
 }
 
 if (await app.Services.TryRunCommandAsync(args, Console.Out, app.Lifetime.ApplicationStopping))
@@ -89,6 +96,7 @@ if (app.Environment.IsDevelopment())
 app.MapIdentityEndpoints();
 app.MapCoreEndpoints();
 app.MapWarehouseEndpoints();
+app.MapPurchasingEndpoints();
 
 await app.RunAsync();
 

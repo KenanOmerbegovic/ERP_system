@@ -14,11 +14,18 @@ import type {
   CreateUserRequest,
   CreatedResponse,
   CurrentUserResponse,
+  GoodsReceiptRequest,
+  GoodsReceiptResponse,
+  InvoiceableReceiptLineResponse,
   ListArticlesParams,
   ListBusinessPartnersParams,
+  ListGoodsReceiptsParams,
+  ListInvoiceableReceiptLinesParams,
+  ListPurchaseOrdersParams,
   ListSerialNumbersParams,
   ListStockBalancesParams,
   ListStockDocumentsParams,
+  ListSupplierInvoicesParams,
   LoginRequest,
   LogoutRequest,
   MemberResponse,
@@ -26,19 +33,30 @@ import type {
   NumberSeriesResponse,
   PagedResponseOfArticleResponse,
   PagedResponseOfBusinessPartnerResponse,
+  PagedResponseOfGoodsReceiptSummaryResponse,
+  PagedResponseOfPurchaseOrderSummaryResponse,
   PagedResponseOfSerialNumberResponse,
   PagedResponseOfStockBalanceResponse,
   PagedResponseOfStockDocumentSummaryResponse,
+  PagedResponseOfSupplierInvoiceSummaryResponse,
+  PurchaseOrderRequest,
+  PurchaseOrderResponse,
+  PurchasingNumberSeriesRequest,
+  PurchasingNumberSeriesResponse,
   RefreshRequest,
   RegisterAccountRequest,
   RoleRequest,
   RoleResponse,
   StockDocumentRequest,
   StockDocumentResponse,
+  SupplierInvoiceRequest,
+  SupplierInvoiceResponse,
   UnitOfMeasureRequest,
   UnitOfMeasureResponse,
   UpdateArticleRequest,
   UpdateMemberRequest,
+  VatRateRequest,
+  VatRateResponse,
   WarehouseRequest,
   WarehouseResponse
 } from './model';
@@ -341,6 +359,30 @@ export const updateArticle = (
       options);
     }
 
+export const listVatRates = (
+    companyId: string,
+ options?: SecondParameter<typeof apiRequest<VatRateResponse[]>>,) => {
+      return apiRequest<VatRateResponse[]>(
+      {url: `/api/companies/${companyId}/vat-rates`, method: 'GET'
+    },
+      options);
+    }
+
+/**
+ * Rates are not edited: a rate change is a new rate of the same code from a later date.
+ */
+export const createVatRate = (
+    companyId: string,
+    vatRateRequest: BodyType<VatRateRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/vat-rates`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: vatRateRequest
+    },
+      options);
+    }
+
 export const listWarehouses = (
     companyId: string,
  options?: SecondParameter<typeof apiRequest<WarehouseResponse[]>>,) => {
@@ -515,6 +557,287 @@ export const createWarehouseNumberSeries = (
       options);
     }
 
+export const listPurchaseOrders = (
+    companyId: string,
+    params?: ListPurchaseOrdersParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfPurchaseOrderSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfPurchaseOrderSummaryResponse>(
+      {url: `/api/companies/${companyId}/purchase-orders`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createPurchaseOrder = (
+    companyId: string,
+    purchaseOrderRequest: BodyType<PurchaseOrderRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/purchase-orders`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: purchaseOrderRequest
+    },
+      options);
+    }
+
+export const getPurchaseOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<PurchaseOrderResponse>>,) => {
+      return apiRequest<PurchaseOrderResponse>(
+      {url: `/api/companies/${companyId}/purchase-orders/${orderId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updatePurchaseOrder = (
+    companyId: string,
+    orderId: string,
+    purchaseOrderRequest: BodyType<PurchaseOrderRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/purchase-orders/${orderId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: purchaseOrderRequest
+    },
+      options);
+    }
+
+export const deletePurchaseOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/purchase-orders/${orderId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Numbers the order and makes it immutable. 422 NumberSeries.NotConfigured without a number series.
+ */
+export const confirmPurchaseOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/purchase-orders/${orderId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Reverses an order nothing was received or invoiced on (409 PurchaseOrder.HasReceipts otherwise); returns the storno's id.
+ */
+export const stornoPurchaseOrder = (
+    companyId: string,
+    orderId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/purchase-orders/${orderId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listGoodsReceipts = (
+    companyId: string,
+    params?: ListGoodsReceiptsParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfGoodsReceiptSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfGoodsReceiptSummaryResponse>(
+      {url: `/api/companies/${companyId}/goods-receipts`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+/**
+ * Saves a draft receipt against a confirmed order; stock moves when it is confirmed.
+ */
+export const createGoodsReceipt = (
+    companyId: string,
+    goodsReceiptRequest: BodyType<GoodsReceiptRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/goods-receipts`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: goodsReceiptRequest
+    },
+      options);
+    }
+
+export const getGoodsReceipt = (
+    companyId: string,
+    receiptId: string,
+ options?: SecondParameter<typeof apiRequest<GoodsReceiptResponse>>,) => {
+      return apiRequest<GoodsReceiptResponse>(
+      {url: `/api/companies/${companyId}/goods-receipts/${receiptId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateGoodsReceipt = (
+    companyId: string,
+    receiptId: string,
+    goodsReceiptRequest: BodyType<GoodsReceiptRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/goods-receipts/${receiptId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: goodsReceiptRequest
+    },
+      options);
+    }
+
+export const deleteGoodsReceipt = (
+    companyId: string,
+    receiptId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/goods-receipts/${receiptId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * Receives the goods into the warehouse at the order price and numbers the receipt. Confirming a receipt left in the Confirming state completes it; stock moves only once. Warehouse refusals (e.g. 409 SerialNumber.AlreadyInStock, 400 per line) are passed on and the receipt is a draft again.
+ */
+export const confirmGoodsReceipt = (
+    companyId: string,
+    receiptId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/goods-receipts/${receiptId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+/**
+ * Takes the goods back out of the warehouse with a storno receipt dated today; returns its id. 409 Stock.Insufficient (with shortages) if they are gone, 409 GoodsReceipt.Invoiced if the receipt is invoiced.
+ */
+export const stornoGoodsReceipt = (
+    companyId: string,
+    receiptId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/goods-receipts/${receiptId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listSupplierInvoices = (
+    companyId: string,
+    params?: ListSupplierInvoicesParams,
+ options?: SecondParameter<typeof apiRequest<PagedResponseOfSupplierInvoiceSummaryResponse>>,) => {
+      return apiRequest<PagedResponseOfSupplierInvoiceSummaryResponse>(
+      {url: `/api/companies/${companyId}/supplier-invoices`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+export const createSupplierInvoice = (
+    companyId: string,
+    supplierInvoiceRequest: BodyType<SupplierInvoiceRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/supplier-invoices`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: supplierInvoiceRequest
+    },
+      options);
+    }
+
+export const getSupplierInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<SupplierInvoiceResponse>>,) => {
+      return apiRequest<SupplierInvoiceResponse>(
+      {url: `/api/companies/${companyId}/supplier-invoices/${invoiceId}`, method: 'GET'
+    },
+      options);
+    }
+
+export const updateSupplierInvoice = (
+    companyId: string,
+    invoiceId: string,
+    supplierInvoiceRequest: BodyType<SupplierInvoiceRequest>,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/supplier-invoices/${invoiceId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: supplierInvoiceRequest
+    },
+      options);
+    }
+
+export const deleteSupplierInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/supplier-invoices/${invoiceId}`, method: 'DELETE'
+    },
+      options);
+    }
+
+/**
+ * The order's confirmed receipt lines that still have quantity to invoice.
+ */
+export const listInvoiceableReceiptLines = (
+    companyId: string,
+    params: ListInvoiceableReceiptLinesParams,
+ options?: SecondParameter<typeof apiRequest<InvoiceableReceiptLineResponse[]>>,) => {
+      return apiRequest<InvoiceableReceiptLineResponse[]>(
+      {url: `/api/companies/${companyId}/supplier-invoices/invoiceable-lines`, method: 'GET',
+        params
+    },
+      options);
+    }
+
+/**
+ * Registers the invoice: numbers it, recomputes its PDV and publishes it (with price differences) for Finance.
+ */
+export const confirmSupplierInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<void>>,) => {
+      return apiRequest<void>(
+      {url: `/api/companies/${companyId}/supplier-invoices/${invoiceId}/confirm`, method: 'POST'
+    },
+      options);
+    }
+
+export const stornoSupplierInvoice = (
+    companyId: string,
+    invoiceId: string,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/supplier-invoices/${invoiceId}/storno`, method: 'POST'
+    },
+      options);
+    }
+
+export const listPurchasingNumberSeries = (
+    companyId: string,
+ options?: SecondParameter<typeof apiRequest<PurchasingNumberSeriesResponse[]>>,) => {
+      return apiRequest<PurchasingNumberSeriesResponse[]>(
+      {url: `/api/companies/${companyId}/purchasing-number-series`, method: 'GET'
+    },
+      options);
+    }
+
+export const createPurchasingNumberSeries = (
+    companyId: string,
+    purchasingNumberSeriesRequest: BodyType<PurchasingNumberSeriesRequest>,
+ options?: SecondParameter<typeof apiRequest<CreatedResponse>>,) => {
+      return apiRequest<CreatedResponse>(
+      {url: `/api/companies/${companyId}/purchasing-number-series`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: purchasingNumberSeriesRequest
+    },
+      options);
+    }
+
 export type LoginResult = NonNullable<Awaited<ReturnType<typeof login>>>
 export type RefreshSessionResult = NonNullable<Awaited<ReturnType<typeof refreshSession>>>
 export type LogoutResult = NonNullable<Awaited<ReturnType<typeof logout>>>
@@ -540,6 +863,8 @@ export type UpdateUnitOfMeasureResult = NonNullable<Awaited<ReturnType<typeof up
 export type ListArticlesResult = NonNullable<Awaited<ReturnType<typeof listArticles>>>
 export type CreateArticleResult = NonNullable<Awaited<ReturnType<typeof createArticle>>>
 export type UpdateArticleResult = NonNullable<Awaited<ReturnType<typeof updateArticle>>>
+export type ListVatRatesResult = NonNullable<Awaited<ReturnType<typeof listVatRates>>>
+export type CreateVatRateResult = NonNullable<Awaited<ReturnType<typeof createVatRate>>>
 export type ListWarehousesResult = NonNullable<Awaited<ReturnType<typeof listWarehouses>>>
 export type CreateWarehouseResult = NonNullable<Awaited<ReturnType<typeof createWarehouse>>>
 export type UpdateWarehouseResult = NonNullable<Awaited<ReturnType<typeof updateWarehouse>>>
@@ -554,3 +879,27 @@ export type ListStockBalancesResult = NonNullable<Awaited<ReturnType<typeof list
 export type ListSerialNumbersResult = NonNullable<Awaited<ReturnType<typeof listSerialNumbers>>>
 export type ListWarehouseNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof listWarehouseNumberSeries>>>
 export type CreateWarehouseNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof createWarehouseNumberSeries>>>
+export type ListPurchaseOrdersResult = NonNullable<Awaited<ReturnType<typeof listPurchaseOrders>>>
+export type CreatePurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof createPurchaseOrder>>>
+export type GetPurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>
+export type UpdatePurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof updatePurchaseOrder>>>
+export type DeletePurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof deletePurchaseOrder>>>
+export type ConfirmPurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof confirmPurchaseOrder>>>
+export type StornoPurchaseOrderResult = NonNullable<Awaited<ReturnType<typeof stornoPurchaseOrder>>>
+export type ListGoodsReceiptsResult = NonNullable<Awaited<ReturnType<typeof listGoodsReceipts>>>
+export type CreateGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof createGoodsReceipt>>>
+export type GetGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof getGoodsReceipt>>>
+export type UpdateGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof updateGoodsReceipt>>>
+export type DeleteGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof deleteGoodsReceipt>>>
+export type ConfirmGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof confirmGoodsReceipt>>>
+export type StornoGoodsReceiptResult = NonNullable<Awaited<ReturnType<typeof stornoGoodsReceipt>>>
+export type ListSupplierInvoicesResult = NonNullable<Awaited<ReturnType<typeof listSupplierInvoices>>>
+export type CreateSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof createSupplierInvoice>>>
+export type GetSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof getSupplierInvoice>>>
+export type UpdateSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof updateSupplierInvoice>>>
+export type DeleteSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof deleteSupplierInvoice>>>
+export type ListInvoiceableReceiptLinesResult = NonNullable<Awaited<ReturnType<typeof listInvoiceableReceiptLines>>>
+export type ConfirmSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof confirmSupplierInvoice>>>
+export type StornoSupplierInvoiceResult = NonNullable<Awaited<ReturnType<typeof stornoSupplierInvoice>>>
+export type ListPurchasingNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof listPurchasingNumberSeries>>>
+export type CreatePurchasingNumberSeriesResult = NonNullable<Awaited<ReturnType<typeof createPurchasingNumberSeries>>>

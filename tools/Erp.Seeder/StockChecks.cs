@@ -13,7 +13,7 @@ namespace Erp.Seeder;
 
 /// <summary>
 /// FR-GEN-03, consistent stock levels: the stock read back through Warehouse's queries equals the generated opening
-/// receipts, and the stock ledger agrees with itself (balances = sum of movements, nothing negative, every serial
+/// receipts plus the purchased goods, and the stock ledger agrees with itself (balances = sum of movements, nothing negative, every serial
 /// number in stock counted once).
 /// </summary>
 internal static class StockChecks
@@ -29,7 +29,8 @@ internal static class StockChecks
         var documents = await provider.GetRequiredService<ListStockDocumentsHandler>().HandleAsync(
             new ListStockDocuments(seeded.CompanyId, StockDocumentType.Receipt, StockDocumentStatus.Confirmed, null, null, null, null, 1, 1),
             cancellationToken);
-        Expect(problems, "confirmed opening receipts", data.OpeningReceipts.Count, documents.IsSuccess ? documents.Value.TotalCount : -1);
+        var purchased = seeded.PurchaseOrders.Count(order => order.ReceiptId is not null);
+        Expect(problems, "confirmed stock receipts (opening and purchased)", data.OpeningReceipts.Count + purchased, documents.IsSuccess ? documents.Value.TotalCount : -1);
 
         await CheckBalancesAgainstReceiptsAsync(provider, data, seeded, problems, cancellationToken);
         await CheckLedgerAsync(provider.GetRequiredService<IWarehouseDbContext>(), seeded, problems, cancellationToken);
@@ -38,10 +39,23 @@ internal static class StockChecks
     private static async Task CheckBalancesAgainstReceiptsAsync(
         IServiceProvider provider, SeedData data, SeededCompany seeded, List<string> problems, CancellationToken cancellationToken)
     {
-        var expected = data.OpeningReceipts
-            .SelectMany(receipt => receipt.Lines.Select(line => (Warehouse: seeded.WarehouseIds[receipt.WarehouseCode], Article: seeded.ArticleIds[line.ArticleCode], line)))
+        // Opening stock, plus what the purchasing scenario received into the first warehouse at the order price.
+        var firstWarehouse = seeded.WarehouseIds[data.Warehouses[0].Code];
+        var opening = data.OpeningReceipts
+            .SelectMany(receipt => receipt.Lines.Select(line => (
+                Warehouse: seeded.WarehouseIds[receipt.WarehouseCode], Article: seeded.ArticleIds[line.ArticleCode], line.Quantity, line.Value)));
+        var purchased = seeded.PurchaseOrders
+            .Where(order => order.ReceiptId is not null)
+            .SelectMany(order => order.Seed.Lines
+                .Where(line => line.ReceivedQuantity(order.Seed.ReceivedShare) > 0m)
+                .Select(line => (
+                    Warehouse: firstWarehouse,
+                    Article: seeded.ArticleIds[line.ArticleCode],
+                    Quantity: line.ReceivedQuantity(order.Seed.ReceivedShare),
+                    Value: line.ReceivedValue(order.Seed.ReceivedShare))));
+        var expected = opening.Concat(purchased)
             .GroupBy(entry => (entry.Warehouse, entry.Article))
-            .ToDictionary(group => group.Key, group => (Quantity: group.Sum(e => e.line.Quantity), Value: group.Sum(e => e.line.Value)));
+            .ToDictionary(group => group.Key, group => (Quantity: group.Sum(e => e.Quantity), Value: group.Sum(e => e.Value)));
 
         var handler = provider.GetRequiredService<ListStockBalancesHandler>();
         var actual = new List<StockBalanceResponse>();

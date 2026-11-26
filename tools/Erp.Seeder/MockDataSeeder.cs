@@ -2,6 +2,13 @@ using Erp.Modules.Core.Application.Articles;
 using Erp.Modules.Core.Application.BusinessPartners;
 using Erp.Modules.Core.Application.Companies;
 using Erp.Modules.Core.Application.UnitsOfMeasure;
+using Erp.Modules.Core.Application.Vat;
+using Erp.Modules.Purchasing.Application.Abstractions;
+using Erp.Modules.Purchasing.Application.Invoices;
+using Erp.Modules.Purchasing.Application.Numbering;
+using Erp.Modules.Purchasing.Application.Orders;
+using Erp.Modules.Purchasing.Application.Receipts;
+using Erp.Modules.Purchasing.Domain.Receipts;
 using Erp.Modules.Identity.Application.Auth;
 using Erp.Modules.Identity.Application.Registration;
 using Erp.Modules.Identity.Application.Roles;
@@ -26,11 +33,16 @@ internal sealed record SeededCompany(
     Guid AdministratorId,
     IReadOnlyDictionary<string, Guid> RoleIds,
     IReadOnlyDictionary<string, Guid> ArticleIds,
-    IReadOnlyDictionary<string, Guid> WarehouseIds);
+    IReadOnlyDictionary<string, Guid> WarehouseIds,
+    IReadOnlyList<SeededPurchaseOrder> PurchaseOrders);
+
+/// <summary>A seeded order with its receipt and invoice, when the scenario made them.</summary>
+internal sealed record SeededPurchaseOrder(PurchaseOrderSeed Seed, Guid OrderId, Guid? ReceiptId, Guid? InvoiceId);
 
 /// <summary>
 /// Creates the mock data only through Application commands, in the order a real company would:
-/// registration key, administrator account, company, then roles, users, master data, warehouses and opening stock.
+/// registration key, administrator account, company, then roles, users, master data, warehouses and opening stock,
+/// and last a purchasing scenario (orders, receipts that move stock, supplier invoices).
 /// Each command runs in its own scope, like an HTTP request.
 /// </summary>
 internal sealed class MockDataSeeder(IServiceProvider services)
@@ -72,6 +84,14 @@ internal sealed class MockDataSeeder(IServiceProvider services)
                 cancellationToken);
         }
 
+        foreach (var rate in data.VatRates)
+        {
+            await SendAsync<CreateVatRateHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(new CreateVatRate(companyId, rate.Code, rate.Name, rate.Rate, rate.ValidFrom), ct),
+                $"Create VAT rate {rate.Code}",
+                cancellationToken);
+        }
+
         var unitIds = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var unit in data.Units)
         {
@@ -79,9 +99,10 @@ internal sealed class MockDataSeeder(IServiceProvider services)
                 (handler, ct) => handler.HandleAsync(new CreateUnitOfMeasure(companyId, unit.Code, unit.Name), ct), $"Create unit {unit.Code}", cancellationToken);
         }
 
+        var partnerIds = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var partner in data.Partners)
         {
-            await SendAsync<CreateBusinessPartnerHandler, Guid>(
+            partnerIds[partner.Code] = await SendAsync<CreateBusinessPartnerHandler, Guid>(
                 (handler, ct) => handler.HandleAsync(
                     new CreateBusinessPartner(
                         companyId,
@@ -106,13 +127,130 @@ internal sealed class MockDataSeeder(IServiceProvider services)
         {
             articleIds[article.Code] = await SendAsync<CreateArticleHandler, Guid>(
                 (handler, ct) => handler.HandleAsync(
-                    new CreateArticle(companyId, article.Code, article.Name, article.Type, article.Tracking, unitIds[article.UnitCode], article.IsActive), ct),
+                    new CreateArticle(companyId, article.Code, article.Name, article.Type, article.Tracking, unitIds[article.UnitCode], article.DefaultVatCode, article.IsActive), ct),
                 $"Create article {article.Code}",
                 cancellationToken);
         }
 
         var warehouseIds = await SeedWarehouseAsync(data, companyId, articleIds, cancellationToken);
-        return new SeededCompany(companyId, administratorId, roleIds, articleIds, warehouseIds);
+        var orders = await SeedPurchasingAsync(data, companyId, partnerIds, articleIds, warehouseIds[data.Warehouses[0].Code], cancellationToken);
+        return new SeededCompany(companyId, administratorId, roleIds, articleIds, warehouseIds, orders);
+    }
+
+    /// <summary>Number series, then each order confirmed, received (fully or partly) and invoiced as its seed says.</summary>
+    private async Task<IReadOnlyList<SeededPurchaseOrder>> SeedPurchasingAsync(
+        SeedData data,
+        CompanyId companyId,
+        IReadOnlyDictionary<string, Guid> partnerIds,
+        IReadOnlyDictionary<string, Guid> articleIds,
+        Guid warehouseId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var series in data.PurchasingNumberSeries)
+        {
+            await SendAsync<CreatePurchasingNumberSeriesHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(new CreatePurchasingNumberSeries(companyId, series.DocumentType, series.ValidFrom, series.Prefix, series.Padding), ct),
+                $"Create purchasing number series {series.Prefix}",
+                cancellationToken);
+        }
+
+        await WaitForPurchasingReferencesAsync(companyId, partnerIds.Count, articleIds.Count, cancellationToken);
+
+        var seeded = new List<SeededPurchaseOrder>();
+        foreach (var (order, index) in data.PurchaseOrders.Select((order, index) => (order, index + 1)))
+        {
+            var orderId = await SendAsync<CreatePurchaseOrderHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(
+                    new CreatePurchaseOrder(
+                        companyId, partnerIds[order.SupplierCode], order.OrderDate, null, warehouseId, null,
+                        order.Lines.Select(line => new PurchaseOrderDraftLine(articleIds[line.ArticleCode], line.Quantity, line.UnitPrice, null)).ToList()),
+                    ct),
+                $"Create purchase order {index}",
+                cancellationToken);
+            await SendAsync<ConfirmPurchaseOrderHandler>(
+                (handler, ct) => handler.HandleAsync(new ConfirmPurchaseOrder(companyId, orderId), ct), $"Confirm purchase order {index}", cancellationToken);
+            if (order.ReceivedShare == 0m)
+            {
+                seeded.Add(new SeededPurchaseOrder(order, orderId, null, null));
+                continue;
+            }
+
+            var orderLineIds = await PurchaseOrderLineIdsAsync(orderId, cancellationToken);
+            var receiptId = await SendAsync<CreateGoodsReceiptHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(
+                    new CreateGoodsReceipt(
+                        companyId, orderId, warehouseId, order.ReceiptDate, null,
+                        order.Lines.Select((line, i) => new GoodsReceiptLineInput(orderLineIds[i], line.ReceivedQuantity(order.ReceivedShare), line.LotNumber, null, []))
+                            .Where(line => line.Quantity > 0m)
+                            .ToList()),
+                    ct),
+                $"Create goods receipt for order {index}",
+                cancellationToken);
+            await SendAsync<ConfirmGoodsReceiptHandler>(
+                (handler, ct) => handler.HandleAsync(new ConfirmGoodsReceipt(companyId, receiptId), ct), $"Confirm goods receipt for order {index}", cancellationToken);
+            if (order.SupplierInvoiceNumber is null)
+            {
+                seeded.Add(new SeededPurchaseOrder(order, orderId, receiptId, null));
+                continue;
+            }
+
+            var receiptLineIds = await ReceiptLineIdsAsync(receiptId, cancellationToken);
+            var invoiceId = await SendAsync<CreateSupplierInvoiceHandler, Guid>(
+                (handler, ct) => handler.HandleAsync(
+                    new CreateSupplierInvoice(
+                        companyId, orderId, order.SupplierInvoiceNumber, order.InvoiceDate, order.InvoiceDate.AddDays(30), null,
+                        order.Lines.Select((line, i) => new SupplierInvoiceDraftLine(
+                            receiptLineIds[i], line.Quantity, i == 0 ? Math.Round(line.UnitPrice * order.InvoicePriceFactor, 2) : line.UnitPrice, null)).ToList()),
+                    ct),
+                $"Create supplier invoice {order.SupplierInvoiceNumber}",
+                cancellationToken);
+            await SendAsync<ConfirmSupplierInvoiceHandler>(
+                (handler, ct) => handler.HandleAsync(new ConfirmSupplierInvoice(companyId, invoiceId), ct),
+                $"Register supplier invoice {order.SupplierInvoiceNumber}",
+                cancellationToken);
+            seeded.Add(new SeededPurchaseOrder(order, orderId, receiptId, invoiceId));
+        }
+
+        return seeded;
+    }
+
+    private async Task<IReadOnlyList<Guid>> PurchaseOrderLineIdsAsync(Guid orderId, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IPurchasingDbContext>().PurchaseOrders
+            .Where(o => o.Id == orderId).SelectMany(o => o.Lines).OrderBy(l => l.LineNumber).Select(l => l.Id).ToListAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Guid>> ReceiptLineIdsAsync(Guid receiptId, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IPurchasingDbContext>().GoodsReceipts
+            .Where(r => r.Id == receiptId).SelectMany(r => r.Lines).OrderBy(l => l.LineNumber).Select(l => l.Id).ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Purchasing learns about partners and articles through Core's outbox, moments after they are created.</summary>
+    private async Task WaitForPurchasingReferencesAsync(CompanyId companyId, int partners, int articles, CancellationToken cancellationToken)
+    {
+        var deadline = DateTimeOffset.UtcNow + EventTimeout;
+        while (true)
+        {
+            await using (var scope = services.CreateAsyncScope())
+            {
+                var purchasing = scope.ServiceProvider.GetRequiredService<IPurchasingDbContext>();
+                if (await purchasing.Suppliers.CountAsync(s => s.CompanyId == companyId, cancellationToken) == partners
+                    && await purchasing.Articles.CountAsync(a => a.CompanyId == companyId, cancellationToken) == articles)
+                {
+                    return;
+                }
+            }
+
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new SeedFailedException("Business partners and articles did not reach the Purchasing module; is the outbox processor running?");
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
+        }
     }
 
     /// <summary>Number series and warehouses, then the opening stock as confirmed receipts.</summary>

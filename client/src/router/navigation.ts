@@ -1,4 +1,9 @@
-import { CorePermissions, IdentityPermissions, WarehousePermissions } from './permissions';
+import {
+  CorePermissions,
+  IdentityPermissions,
+  PurchasingPermissions,
+  WarehousePermissions,
+} from './permissions';
 
 /** A message key under `modules` in src/i18n. */
 type ModuleKey = 'core' | 'sales' | 'purchasing' | 'inventory' | 'accounting' | 'administration';
@@ -20,7 +25,7 @@ export interface NavigationModule {
 }
 
 /**
- * The module navigation. Core's partners and the warehouse pages work; the other items lead to
+ * The module navigation. Core's partners and VAT rates, and the warehouse and purchasing pages work; the other items lead to
  * a placeholder page but are already permission-checked.
  */
 export const navigation: readonly NavigationModule[] = [
@@ -46,10 +51,45 @@ export const navigation: readonly NavigationModule[] = [
         icon: 'straighten',
         permission: CorePermissions.unitsOfMeasureRead,
       },
+      {
+        route: 'vat-rates',
+        labelKey: 'modules.core.vatRates',
+        icon: 'percent',
+        permission: CorePermissions.vatRatesRead,
+      },
     ],
   },
   { key: 'sales', icon: 'point_of_sale', items: [] },
-  { key: 'purchasing', icon: 'local_shipping', items: [] },
+  {
+    key: 'purchasing',
+    icon: 'local_shipping',
+    items: [
+      {
+        route: 'purchase-orders',
+        labelKey: 'modules.purchasing.orders',
+        icon: 'assignment',
+        permission: PurchasingPermissions.ordersRead,
+      },
+      {
+        route: 'goods-receipts',
+        labelKey: 'modules.purchasing.receipts',
+        icon: 'move_to_inbox',
+        permission: PurchasingPermissions.receiptsRead,
+      },
+      {
+        route: 'supplier-invoices',
+        labelKey: 'modules.purchasing.invoices',
+        icon: 'request_quote',
+        permission: PurchasingPermissions.invoicesRead,
+      },
+      {
+        route: 'purchasing-number-series',
+        labelKey: 'modules.purchasing.numberSeries',
+        icon: 'pin',
+        permission: PurchasingPermissions.ordersRead,
+      },
+    ],
+  },
   {
     key: 'inventory',
     icon: 'warehouse',

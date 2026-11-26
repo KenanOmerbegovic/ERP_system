@@ -5,7 +5,8 @@ namespace Erp.Modules.Core.Domain.Articles;
 /// <summary>Goods or a service a company buys or sells. Tax is linked later, from Finance configuration.</summary>
 public sealed class Article : AggregateRoot<Guid>
 {
-    private Article(Guid id, CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, bool isActive)
+    private Article(
+        Guid id, CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, string? defaultVatCode, bool isActive)
         : base(id, companyId)
     {
         if (!Enum.IsDefined(trackingType))
@@ -14,7 +15,7 @@ public sealed class Article : AggregateRoot<Guid>
         }
 
         TrackingType = trackingType;
-        Update(code, name, type, unitOfMeasureId, isActive);
+        Update(code, name, type, unitOfMeasureId, defaultVatCode, isActive);
     }
 
     private Article()
@@ -34,13 +35,16 @@ public sealed class Article : AggregateRoot<Guid>
     /// <summary>A unit of measure of the same company.</summary>
     public Guid UnitOfMeasureId { get; private set; }
 
+    /// <summary>The VAT code purchase and sales lines start from; one of the company's VAT rates. Optional.</summary>
+    public string? DefaultVatCode { get; private set; }
+
     public bool IsActive { get; private set; }
 
     public static Article Create(
-        CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, bool isActive) =>
-        new(Guid.CreateVersion7(), companyId, code, name, type, trackingType, unitOfMeasureId, isActive);
+        CompanyId companyId, string code, string name, ArticleType type, TrackingType trackingType, Guid unitOfMeasureId, string? defaultVatCode, bool isActive) =>
+        new(Guid.CreateVersion7(), companyId, code, name, type, trackingType, unitOfMeasureId, defaultVatCode, isActive);
 
-    public void Update(string code, string name, ArticleType type, Guid unitOfMeasureId, bool isActive)
+    public void Update(string code, string name, ArticleType type, Guid unitOfMeasureId, string? defaultVatCode, bool isActive)
     {
         if (!Enum.IsDefined(type))
         {
@@ -61,6 +65,7 @@ public sealed class Article : AggregateRoot<Guid>
         Name = Text.Required(name);
         Type = type;
         UnitOfMeasureId = unitOfMeasureId;
+        DefaultVatCode = Text.Optional(defaultVatCode);
         IsActive = isActive;
     }
 }

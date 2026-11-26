@@ -56,8 +56,8 @@ When a requirement changes, update it here and in the thesis, and note the reaso
 
 | ID | Requirement | Priority | Status |
 | --- | --- | --- | --- |
-| FR-PUR-01 | The system shall allow a purchasing user to create purchase orders for suppliers. | High | Planned |
-| FR-PUR-02 | The system shall allow recording supplier invoices linked to purchase orders. | High | Planned |
+| FR-PUR-01 | The system shall allow a purchasing user to create purchase orders for suppliers. | High | Implemented |
+| FR-PUR-02 | The system shall allow recording supplier invoices linked to purchase orders. | High | Implemented |
 | FR-PUR-03 | The system shall suggest reordering when an article's stock falls below its minimum level. | Low | Planned |
 
 ### Warehouse

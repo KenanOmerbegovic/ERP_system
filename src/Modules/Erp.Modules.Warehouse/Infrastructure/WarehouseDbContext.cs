@@ -1,6 +1,7 @@
 using Erp.Messaging.Outbox;
 using Erp.Modules.Warehouse.Application.Abstractions;
 using Erp.Modules.Warehouse.Domain.Articles;
+using Erp.Modules.Warehouse.Domain.Commands;
 using Erp.Modules.Warehouse.Domain.Numbering;
 using Erp.Modules.Warehouse.Domain.Stock;
 using Erp.Modules.Warehouse.Domain.StockDocuments;
@@ -34,6 +35,8 @@ public sealed class WarehouseDbContext(DbContextOptions<WarehouseDbContext> opti
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
     public DbSet<NumberSeries> NumberSeries => Set<NumberSeries>();
+
+    public DbSet<CommandLogEntry> CommandLog => Set<CommandLogEntry>();
 
     public void AddIntegrationEvent(IIntegrationEvent integrationEvent) => Set<OutboxMessage>().Add(OutboxMessage.From(integrationEvent));
 

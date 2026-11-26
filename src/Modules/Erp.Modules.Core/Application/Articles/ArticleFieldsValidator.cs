@@ -14,6 +14,8 @@ public interface IArticleFields
 
     Guid UnitOfMeasureId { get; }
 
+    string? DefaultVatCode { get; }
+
     bool IsActive { get; }
 }
 
@@ -25,5 +27,6 @@ internal sealed class ArticleFieldsValidator : AbstractValidator<IArticleFields>
         RuleFor(x => x.Name).NotEmpty().MaximumLength(FieldLengths.Name);
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.UnitOfMeasureId).NotEmpty();
+        RuleFor(x => x.DefaultVatCode).MaximumLength(FieldLengths.VatCode);
     }
 }

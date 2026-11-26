@@ -16,6 +16,7 @@ public sealed record CreateArticle(
     ArticleType Type,
     TrackingType TrackingType,
     Guid UnitOfMeasureId,
+    string? DefaultVatCode,
     bool IsActive) : IArticleFields;
 
 internal sealed class CreateArticleValidator : AbstractValidator<CreateArticle>
@@ -54,6 +55,11 @@ public sealed class CreateArticleHandler(ICoreDbContext db, IValidator<CreateArt
             return CoreErrors.ArticleUnitOfMeasureNotFound;
         }
 
+        if (!await db.VatCodeExistsAsync(command.CompanyId, command.DefaultVatCode, cancellationToken))
+        {
+            return CoreErrors.ArticleVatCodeNotFound;
+        }
+
         var code = command.Code.Trim();
         if (await db.Articles.AnyAsync(a => a.CompanyId == command.CompanyId && a.Code == code, cancellationToken))
         {
@@ -61,7 +67,7 @@ public sealed class CreateArticleHandler(ICoreDbContext db, IValidator<CreateArt
         }
 
         var article = Article.Create(
-            command.CompanyId, code, command.Name, command.Type, command.TrackingType, command.UnitOfMeasureId, command.IsActive);
+            command.CompanyId, code, command.Name, command.Type, command.TrackingType, command.UnitOfMeasureId, command.DefaultVatCode, command.IsActive);
         db.Articles.Add(article);
         db.AddIntegrationEvent(article.ToCreatedEvent(clock.UtcNow));
         await db.SaveChangesAsync(cancellationToken);

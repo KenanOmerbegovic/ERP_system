@@ -23,6 +23,7 @@ internal static class Tables
     public const string StockMovements = "stock_movements";
     public const string NumberSeries = "number_series";
     public const string NumberCounters = "number_counters";
+    public const string CommandLog = "command_log";
 }
 
 internal static class Columns
@@ -88,6 +89,8 @@ internal sealed class StockDocumentConfiguration : IEntityTypeConfiguration<Stoc
         builder.HasIndex(d => new { d.CompanyId, d.Number }).IsUnique();
         builder.HasIndex(d => new { d.CompanyId, d.DocumentDate });
         builder.HasIndex(d => d.ReversesDocumentId).IsUnique();
+        builder.Property(d => d.SourceModule).HasMaxLength(FieldLengths.Code);
+        builder.Ignore(d => d.IsOwnedByAnotherModule);
         builder.Ignore(d => d.IsStorno);
         builder.Ignore(d => d.IsDraft);
         builder.Ignore(d => d.TotalValue);
@@ -230,5 +233,20 @@ internal sealed class NumberCounterConfiguration : IEntityTypeConfiguration<Numb
         builder.ToTable(Tables.NumberCounters);
         builder.HasKey(c => new { c.CompanyId, c.DocumentType, c.Year });
         builder.Property(c => c.DocumentType).HasMaxLength(20);
+    }
+}
+
+internal sealed class CommandLogEntryConfiguration : IEntityTypeConfiguration<Erp.Modules.Warehouse.Domain.Commands.CommandLogEntry>
+{
+    public void Configure(EntityTypeBuilder<Erp.Modules.Warehouse.Domain.Commands.CommandLogEntry> builder)
+    {
+        builder.ToTable(Tables.CommandLog);
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.SourceModule).HasMaxLength(FieldLengths.Code);
+        builder.Property(c => c.Action).HasMaxLength(20);
+        builder.Property(c => c.PayloadHash).HasMaxLength(64);
+        builder.HasOne<StockDocument>().WithMany().HasForeignKey(c => c.DocumentId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(c => new { c.CompanyId, c.SourceModule, c.SourceDocumentId, c.Action }).IsUnique();
+        builder.Ignore(c => c.IsCompleted);
     }
 }

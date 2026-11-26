@@ -33,4 +33,8 @@ export interface StockDocumentResponse {
      */
   totalValue: number | string | null;
   lines: StockDocumentLineResponse[];
+  /** @nullable */
+  sourceModule: string | null;
+  /** @nullable */
+  sourceDocumentId: string | null;
 }

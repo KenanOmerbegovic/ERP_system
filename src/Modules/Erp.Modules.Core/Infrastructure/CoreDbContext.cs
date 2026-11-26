@@ -4,6 +4,7 @@ using Erp.Modules.Core.Domain.Articles;
 using Erp.Modules.Core.Domain.BusinessPartners;
 using Erp.Modules.Core.Domain.Companies;
 using Erp.Modules.Core.Domain.UnitsOfMeasure;
+using Erp.Modules.Core.Domain.Vat;
 using Erp.SharedKernel.Domain;
 using Erp.SharedKernel.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,8 @@ public sealed class CoreDbContext(DbContextOptions<CoreDbContext> options) : DbC
     public DbSet<Article> Articles => Set<Article>();
 
     public DbSet<UnitOfMeasure> UnitsOfMeasure => Set<UnitOfMeasure>();
+
+    public DbSet<VatRate> VatRates => Set<VatRate>();
 
     public void AddIntegrationEvent(IIntegrationEvent integrationEvent) => Set<OutboxMessage>().Add(OutboxMessage.From(integrationEvent));
 

@@ -23,9 +23,9 @@ internal static class ArticleMapping
 
     public static ArticleCreated ToCreatedEvent(this Article article, DateTimeOffset now) => new(
         Guid.CreateVersion7(), now, article.CompanyId.Value, article.Id, article.Code, article.Name,
-        article.Type.ToKind(), article.TrackingType.ToTracking(), article.UnitOfMeasureId, article.IsActive);
+        article.Type.ToKind(), article.TrackingType.ToTracking(), article.UnitOfMeasureId, article.IsActive, article.DefaultVatCode);
 
     public static ArticleUpdated ToUpdatedEvent(this Article article, DateTimeOffset now) => new(
         Guid.CreateVersion7(), now, article.CompanyId.Value, article.Id, article.Code, article.Name,
-        article.Type.ToKind(), article.TrackingType.ToTracking(), article.UnitOfMeasureId, article.IsActive);
+        article.Type.ToKind(), article.TrackingType.ToTracking(), article.UnitOfMeasureId, article.IsActive, article.DefaultVatCode);
 }

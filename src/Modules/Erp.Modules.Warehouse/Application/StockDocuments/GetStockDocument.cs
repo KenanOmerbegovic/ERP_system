@@ -54,6 +54,8 @@ public sealed class GetStockDocumentHandler(IWarehouseDbContext db)
             document.ReversedByDocumentId,
             document.ConfirmedAt,
             document.TotalValue,
-            lines);
+            lines,
+            document.SourceModule,
+            document.SourceDocumentId);
     }
 }
